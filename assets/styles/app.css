@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+.class2 {
+    color: blue;
+}
+
+.toto {
+    .toto {
+
+    }
+}

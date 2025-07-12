@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Mon site{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {# Assets CSS - si tu utilises Tailwind avec AssetMapper #}
+    {% block stylesheets %}
+        <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+    {% endblock %}
+    {# Pour les favicons, polices, etc. à ajouter si besoin #}
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen">
+<header class="bg-white shadow p-4">
+    <div class="container mx-auto flex justify-between items-center">
+        <a href="{{ path('app_home') }}">Service Troc</a>
+
+        {% if app.user %}
+            <nav class="space-x-4">
+                <span>Bonjour, {{ app.user.username }}</span>
+                <a href="{{ path('app_profile') }}" class="text-blue-600 hover:underline">Mon profil</a>
+                <a href="{{ path('app_logout') }}" class="text-red-600 hover:underline">Déconnexion</a>
+            </nav>
+        {% else %}
+            <a href="{{ path('app_login') }}" class="text-blue-600 hover:underline">Connexion</a>
+        {% endif %}
+    </div>
+</header>
+
+<main class="container mx-auto py-8">
+    {% block body %}{% endblock %}
+</main>
+
+<footer class="bg-gray-800 text-white text-center p-4 mt-10">
+    <p>&copy; {{ "now"|date("Y") }} Service Troc - Tous droits réservés</p>
+</footer>
+
+{# JS éventuels ici (ex : Alpine.js, etc.) #}
+<script src="{{ asset('app.js') }}"></script>
+</body>
+</html>

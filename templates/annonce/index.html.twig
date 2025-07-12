@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Recherche des annonces
+
+{% endblock %}
+
+{% block body %}
+
+    {# MESSAGE FLASH #}
+    <div class="max-w-5xl mx-auto p-6">
+        {% for label, messages in app.flashes %}
+            <div class="mb-4 p-3 rounded {{ label == 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                {% for message in messages %}
+                    {{ message }}
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+
+    <div class="p-4">
+        <div class="p-24 text-3xl font-semibold text-center">
+            <h1 class="">Bienvenue,
+                {% if app.user %}
+                    {{ app.user.username }}.
+                {% else %}
+                    invité.
+                {% endif %}
+                <br>Vous
+                <span class="text-blue-600">recherchez une salle ?</span>
+            </h1>
+        </div>
+
+        <twig:EventRoomSearch/>
+    </div>
+
+{% endblock %}
