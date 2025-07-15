@@ -13,6 +13,8 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\IsTrue;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Constraints\Regex;
+
 
 class RegistrationFormType extends AbstractType
 {
@@ -49,6 +51,22 @@ class RegistrationFormType extends AbstractType
                 'mapped' => false,
                 'constraints' => [
                     new IsTrue(['message' => 'Vous devez accepter les conditions.']),
+                ],
+            ])
+            ->add('ville', TextType::class, [
+                'label' => 'Ville',
+                'constraints' => [
+                    new NotBlank(['message' => 'La ville est obligatoire.']),
+                ],
+            ])
+            ->add('codePostal', TextType::class, [
+                'label' => 'Code postal',
+                'constraints' => [
+                    new NotBlank(['message' => 'Le code postal est obligatoire.']),
+                    new Regex([
+                        'pattern' => '/^\d{4}$/',
+                        'message' => 'Le code postal doit contenir exactement 4 chiffres.',
+                    ]),
                 ],
             ])
             ->add('plainPassword', PasswordType::class, [

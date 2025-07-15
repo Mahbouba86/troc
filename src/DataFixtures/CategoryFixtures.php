@@ -10,11 +10,20 @@ class CategoryFixtures extends Fixture
 {
     public function load(ObjectManager $manager): void
     {
-        $categories = ['Enfant', 'Bricolage', 'Beauté', 'Maison', 'Animaux', 'Alimentation', 'Multimédia',];
+        $categories = [
+            ['Enfant', 'enfant.jpg'],
+            ['Bricolage', 'bricolage.jpg'],
+            ['Beauté', 'beaute.jpg'],
+            ['Maison', 'maison.jpg'],
+            ['Animaux', 'animaux.jpg'],
+            ['Alimentation', 'alimentation.jpg'],
+            ['Multimédia', 'multimedia.jpg'],
+        ];
 
-        foreach ($categories as $name) {
+        foreach ($categories as [$name, $image]) {
             $category = new Category();
-            $category->setName($name); // ou setTitre(), selon ton entité
+            $category->setName($name);
+            $category->setImage($image);
             $manager->persist($category);
         }
 

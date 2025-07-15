@@ -21,7 +21,7 @@ class Annonce
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 15)]
+    #[ORM\Column(length: 250)]
     private ?string $titre = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
@@ -41,7 +41,10 @@ class Annonce
     #[Ignore] // Empêche la récursion infinie via sérialisation
     private ?User $user = null;
 
+
     #[ORM\ManyToOne(inversedBy: 'annonces')]
+    #[ORM\JoinColumn(nullable: false)]
+    #[Assert\NotNull(message: 'Vous devez sélectionner une catégorie.')]
     private ?Category $category = null;
 
     /**
@@ -49,6 +52,9 @@ class Annonce
      */
     #[ORM\OneToMany(targetEntity: Message::class, mappedBy: 'annonce', orphanRemoval: true)]
     private Collection $messages;
+
+    #[ORM\Column(length: 255)]
+    private ?string $ville = null;
 
     public function __construct()
     {
@@ -162,6 +168,18 @@ class Annonce
                 $message->setAnnonce(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getVille(): ?string
+    {
+        return $this->ville;
+    }
+
+    public function setVille(string $ville): static
+    {
+        $this->ville = $ville;
 
         return $this;
     }

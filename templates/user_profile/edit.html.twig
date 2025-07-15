@@ -15,6 +15,12 @@
         </div>
 
         <div>
+            {{ form_label(form.email) }}
+            {{ form_widget(form.email, {'attr': {'class': 'form-input'}}) }}
+            {{ form_errors(form.email) }}
+        </div>
+
+        <div>
             {{ form_label(form.phoneNumber) }}
             {{ form_widget(form.phoneNumber, {'attr': {'class': 'form-input'}}) }}
             {{ form_errors(form.phoneNumber) }}
@@ -24,6 +30,18 @@
             {{ form_label(form.address) }}
             {{ form_widget(form.address, {'attr': {'class': 'form-input'}}) }}
             {{ form_errors(form.address) }}
+        </div>
+
+        <div>
+            {{ form_label(form.ville) }}
+            {{ form_widget(form.ville, {'attr': {'class': 'form-input'}}) }}
+            {{ form_errors(form.ville) }}
+        </div>
+
+        <div>
+            {{ form_label(form.codePostal) }}
+            {{ form_widget(form.codePostal, {'attr': {'class': 'form-input'}}) }}
+            {{ form_errors(form.codePostal) }}
         </div>
 
         <button class="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">Enregistrer</button>

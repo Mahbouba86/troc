@@ -1,0 +1,22 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ annonce.titre }}{% endblock %}
+
+{% block body %}
+    <div class="max-w-4xl mx-auto mt-10 px-4">
+        <h1 class="text-3xl font-bold mb-4">{{ annonce.titre }}</h1>
+
+        {% if annonce.image %}
+            <img src="{{ asset('uploads/images/' ~ annonce.image) }}"
+                 alt="Image de l'annonce" class="mb-6 rounded shadow">
+        {% endif %}
+
+        <p class="text-gray-700 mb-4">{{ annonce.description }}</p>
+        <p class="text-sm text-gray-500">Posté le {{ annonce.createdAt|date('d/m/Y à H:i') }}</p>
+
+        <div class="mt-4">
+            <span class="text-gray-600">Par : </span>
+            <strong>{{ annonce.user.username }}</strong>
+        </div>
+    </div>
+{% endblock %}

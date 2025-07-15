@@ -2,8 +2,8 @@
 
 namespace App\DataFixtures;
 
+use App\DataFixtures\Helper\UserCreator\UserCreatorHelper;
 use App\Entity\Message;
-use App\Entity\User;
 use App\Entity\Annonce;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
@@ -12,20 +12,23 @@ use Faker\Factory;
 
 class MessageFixtures extends Fixture
 {
+    public function __construct(private readonly UserCreatorHelper $userCreator)
+    {
+
+    }
+
     public function load(ObjectManager $manager): void
     {
         $faker = Factory::create('fr_FR');
 
         // Créer quelques utilisateurs
-        $user1 = new User();
-        $user1->setEmail('alice@example.com')
-            ->setAddress($faker->address)
-            ->setPhoneNumber($faker->phoneNumber)
+        $user1 = $this->userCreator->createUser()
+            ->setEmail('alice@example.com')
             ->setUsername('alice')
             ->setPassword('password1');
         $manager->persist($user1);
 
-        $user2 = new User();
+        $user2 = $this->userCreator->createUser();
         $user2->setEmail('bob@example.com')
             ->setUsername('bob')
             ->setAddress($faker->address)

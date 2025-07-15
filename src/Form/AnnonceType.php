@@ -37,7 +37,9 @@ class AnnonceType extends AbstractType
                 'choice_label' => 'name', // à adapter selon ton champ (ex: 'label', 'nom', ...)
                 'label' => 'Catégorie',
                 'placeholder' => 'Choisir une catégorie',
+                'required' => true,
             ])
+
         ;
     }
 

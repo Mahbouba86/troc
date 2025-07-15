@@ -10,8 +10,51 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use App\Form\SearchAnnonceType;
+
 class AnnonceController extends AbstractController
 {
+    #[Route('/annonces', name: 'annonce_index')]
+    public function index(Request $request, EntityManagerInterface $em): Response
+    {
+        // Création du formulaire
+        $form = $this->createForm(SearchAnnonceType::class);
+        $form->handleRequest($request);
+
+        $qb = $em->getRepository(Annonce::class)->createQueryBuilder('a');
+
+        // Si le formulaire est soumis
+        if ($form->isSubmitted() && $form->isValid()) {
+            $data = $form->getData();
+
+            if (!empty($data['ville'])) {
+                $qb->andWhere('a.ville LIKE :ville')
+                    ->setParameter('ville', '%' . $data['ville'] . '%');
+            }
+
+            if (!empty($data['category'])) {
+                $qb->andWhere('a.category = :category')
+                    ->setParameter('category', $data['category']);
+            }
+        }
+
+        $annonces = $qb->orderBy('a.createdAt', 'DESC')->getQuery()->getResult();
+
+        return $this->render('annonce/index.html.twig', [
+            'form' => $form->createView(),
+            'annonces' => $annonces,
+        ]);
+    }
+
+
+    #[Route('/annonce/{id}', name: 'annonce_show', requirements: ['id' => '\d+'])]
+    public function show(Annonce $annonce): Response
+    {
+        return $this->render('annonce/show.html.twig', [
+            'annonce' => $annonce,
+        ]);
+    }
+
     #[Route('/annonce/new', name: 'annonce_new')]
     public function new(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {

@@ -7,10 +7,12 @@
 
     {# Assets CSS - si tu utilises Tailwind avec AssetMapper #}
     {% block stylesheets %}
-        <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+        {{ encore_entry_link_tags('app_css') }}
     {% endblock %}
     {# Pour les favicons, polices, etc. à ajouter si besoin #}
 </head>
+
+
 <body class="bg-gray-100 text-gray-900 min-h-screen">
 <header class="bg-white shadow p-4">
     <div class="container mx-auto flex justify-between items-center">
@@ -30,6 +32,10 @@
 
 <main class="container mx-auto py-8">
     {% block body %}{% endblock %}
+    <a href="{{ path('annonce_index') }}"
+       class="text-sm text-blue-600 hover:underline">
+        Voir toutes les annonces
+    </a>
 </main>
 
 <footer class="bg-gray-800 text-white text-center p-4 mt-10">

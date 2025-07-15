@@ -62,11 +62,35 @@
             <label class="font-semibold text-sm text-gray-700">Adresse</label>
             {{ form_widget(registrationForm.address, {
                 'attr': {
-                    'placeholder': '123 rue du Web, 75000 Paris',
+                    'placeholder': '123 rue du Web',
                     'class': 'px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 focus:ring-2 focus:ring-blue-500 text-sm'
                 }
             }) }}
             {{ form_errors(registrationForm.address) }}
+        </div>
+
+        {# 🔹 Nouveau champ : Ville #}
+        <div class="flex flex-col gap-2">
+            <label class="font-semibold text-sm text-gray-700">Ville</label>
+            {{ form_widget(registrationForm.ville, {
+                'attr': {
+                    'placeholder': 'Ex : Paris',
+                    'class': 'px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 focus:ring-2 focus:ring-blue-500 text-sm'
+                }
+            }) }}
+            {{ form_errors(registrationForm.ville) }}
+        </div>
+
+        {# 🔹 Nouveau champ : Code postal #}
+        <div class="flex flex-col gap-2">
+            <label class="font-semibold text-sm text-gray-700">Code postal</label>
+            {{ form_widget(registrationForm.codePostal, {
+                'attr': {
+                    'placeholder': 'Ex : 1234',
+                    'class': 'px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 focus:ring-2 focus:ring-blue-500 text-sm'
+                }
+            }) }}
+            {{ form_errors(registrationForm.codePostal) }}
         </div>
 
         <div class="flex flex-col gap-2">
