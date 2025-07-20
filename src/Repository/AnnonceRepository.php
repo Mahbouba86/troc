@@ -34,6 +34,18 @@ class AnnonceRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
+    public function countByStatus(User $user, string $status): int
+    {
+        return $this->createQueryBuilder('a')
+            ->select('COUNT(a.id)')
+            ->where('a.user = :user')
+            ->andWhere('a.status = :status')
+            ->setParameter('user', $user)
+            ->setParameter('status', $status)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
 
 
 }

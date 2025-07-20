@@ -2,8 +2,7 @@
 
 namespace App\DataFixtures;
 
-use App\DataFixtures\Helper\UserCreator\UserCreatorHelper;
-use App\Entity\User;
+use App\DataFixtures\Helper\UserCreatorHelper\UserCreatorHelper;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;

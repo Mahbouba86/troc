@@ -52,7 +52,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private bool $isVerified = false;
 
-    #[ORM\Column(length: 4, nullable: false)]
+    #[ORM\Column(length: 5, nullable: false)]
     private ?string $codePostal = null;
 
     #[ORM\Column(length: 255)]

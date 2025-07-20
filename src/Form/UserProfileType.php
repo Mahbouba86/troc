@@ -53,7 +53,7 @@ class UserProfileType extends AbstractType
                 'constraints' => [
                     new NotBlank(['message' => 'Le code postal est obligatoire.']),
                     new Regex([
-                        'pattern' => '/^\d{4}$/',
+                        'pattern' => '/^\d{5}$/',
                         'message' => 'Le code postal doit contenir exactement 4 chiffres.',
                     ]),
                 ],

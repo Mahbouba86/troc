@@ -3,6 +3,20 @@
 {% block title %}Accueil{% endblock %}
 
 {% block body %}
-    <h1>Bienvenue sur le site de troc de services</h1>
-    <p>Ce site permet d'échanger des services entre particuliers.</p>
+    <div class="relative w-full h-[calc(100vh-128px)]">
+        <img src="{{ asset('uploads/images/hero.jpg') }}"
+             alt="Image d'accueil"
+             class="absolute inset-0 w-full h-full object-cover z-0" />
+
+        <div class="relative z-10 flex items-center justify-center h-full bg-black/40 text-white text-center px-4">
+            <div>
+                <h1 class="text-4xl md:text-6xl font-bold mb-4">Bienvenue sur Service Troc</h1>
+                <p class="text-lg md:text-xl mb-6">Trouvez ou proposez des services entre particuliers</p>
+                <a href="{{ path('annonce_index') }}"
+                   class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded">
+                    Voir toutes les annonces
+                </a>
+            </div>
+        </div>
+    </div>
 {% endblock %}

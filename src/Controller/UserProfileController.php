@@ -10,9 +10,21 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use App\Entity\User;
+
 
 class UserProfileController extends AbstractController
 {
+    #[Route('/utilisateur/{id}', name: 'user_profile')]
+    public function publicProfile(User $user, AnnonceRepository $annonceRepository): Response
+    {
+        $annonces = $annonceRepository->findBy(['user' => $user]);
+
+        return $this->render('user_profile/index.html.twig', [
+            'user' => $user,
+            'annonces' => $annonces,
+        ]);
+    }
     #[Route('/profil', name: 'app_profile')]
     public function index(
         MessageRepository $messageRepository,
@@ -23,14 +35,17 @@ class UserProfileController extends AbstractController
 
         // Récupération des compteurs
         $messagesRecus = $messageRepository->countReceivedForUser($user);
-        $annoncesCount = $annonceRepository->countForUser($user);
+        $trocEnCoursCount = $annonceRepository->countByStatus($user, 'Réservé');
+        $trocRealisesCount = $annonceRepository->countByStatus($user, 'Troc effectué');
 
         return $this->render('user_profile/index.html.twig', [
             'user' => $user,
             'messagesRecus' => $messagesRecus,
-            'annoncesCount' => $annoncesCount,
+            'trocEnCoursCount' => $trocEnCoursCount,
+            'trocRealisesCount' => $trocRealisesCount,
         ]);
     }
+
 
     #[Route('/profil/modifier', name: 'app_profile_edit')]
     public function edit(Request $request, EntityManagerInterface $em): Response

@@ -1,14 +1,15 @@
 <?php
 
-// src/DataFixtures/AnnonceFixtures.php
 namespace App\DataFixtures;
 
 use App\Entity\Annonce;
 use App\Entity\User;
+use App\Entity\Category;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
+use Enum\Annonce\Status\AnnonceStatus;
 
 class AnnonceFixtures extends Fixture implements DependentFixtureInterface
 {
@@ -16,24 +17,33 @@ class AnnonceFixtures extends Fixture implements DependentFixtureInterface
     {
         $faker = Factory::create('fr_FR');
 
+        /** @var User[] $users */
         $users = $manager->getRepository(User::class)->findAll();
+        /** @var Category[] $categories */
+        $categories = $manager->getRepository(Category::class)->findAll();
 
-        if (count($users) === 0) {
-            throw new \Exception('Aucun utilisateur trouvé en base.');
+        if (!$users) {
+            throw new \RuntimeException('Aucun utilisateur trouvé. Lance d’abord les UserFixtures.');
+        }
+        if (!$categories) {
+            throw new \RuntimeException('Aucune catégorie trouvée. Lance d’abord les CategoryFixtures.');
         }
 
         for ($i = 0; $i < 20; $i++) {
             $annonce = new Annonce();
-            $annonce->setTitre($faker->sentence(3));
-            $annonce->setDescription($faker->paragraph());
-            $annonce->setCreatedAt(new \DateTimeImmutable());
+            $annonce
+                ->setTitre($faker->sentence(3))
+                ->setDescription($faker->paragraph())
+                ->setCreatedAt(new \DateTimeImmutable())
+                ->setImage(sprintf('image%d.jpg', $faker->numberBetween(1, 11)))
+                ->setStatus(AnnonceStatus::AVAILABLE)
+                ->setUser($faker->randomElement($users))
+                ->setCategory($faker->randomElement($categories))
+                ->setVille($faker->city);
 
-            $imageNumber = $faker->numberBetween(1, 11);
-            $imageName = 'image' . $imageNumber . '.jpg';
-            $annonce->setImage($imageName);
-
-            $annonce->setStatus(\Enum\Annonce\Status\AnnonceStatus::AVAILABLE);
-            $annonce->setUser($faker->randomElement($users));
+            if ($annonce->getVille() === null) {
+                dd("VILLE NULL détectée pour l'annonce", $annonce);
+            }
 
             $manager->persist($annonce);
         }
@@ -45,6 +55,7 @@ class AnnonceFixtures extends Fixture implements DependentFixtureInterface
     {
         return [
             UserFixtures::class,
+            CategoryFixtures::class,
         ];
     }
 }
