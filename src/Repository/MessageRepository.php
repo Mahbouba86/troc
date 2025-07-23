@@ -3,18 +3,12 @@
 namespace App\Repository;
 
 use App\Entity\Message;
+use App\Entity\Annonce;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-/**
- * @extends ServiceEntityRepository<Message>
- *
- * @method Message|null find($id, $lockMode = null, $lockVersion = null)
- * @method Message|null findOneBy(array $criteria, array $orderBy = null)
- * @method Message[]    findAll()
- * @method Message[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
- */
+
 class MessageRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -25,13 +19,17 @@ class MessageRepository extends ServiceEntityRepository
     /**
      * Compte les messages reçus par un utilisateur donné
      */
-    public function countReceivedForUser(User $user): int
+    public function findByAnnonceAndUsers(Annonce $annonce, User $user1, User $user2): array
     {
         return $this->createQueryBuilder('m')
-            ->select('COUNT(m.id)')
-            ->where('m.receiver = :user')
-            ->setParameter('user', $user)
+            ->andWhere('m.annonce = :annonce')
+            ->andWhere('(m.sender = :user1 AND m.receiver = :user2) OR (m.sender = :user2 AND m.receiver = :user1)')
+            ->setParameter('annonce', $annonce)
+            ->setParameter('user1', $user1)
+            ->setParameter('user2', $user2)
+            ->orderBy('m.createdAt', 'ASC')
             ->getQuery()
-            ->getSingleScalarResult();
+            ->getResult();
     }
+
 }
