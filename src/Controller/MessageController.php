@@ -24,6 +24,8 @@ class MessageController extends AbstractController
         Security $security
     ): Response {
         $user = $security->getUser();
+        $nbMessagesRecus = $messageRepo->countReceivedForUser($user);
+
         $receiver = $annonce->getUser(); // propriétaire de l'annonce
 
         $messages = $messageRepo->findByAnnonceAndUsers($annonce, $user, $receiver);
@@ -36,7 +38,7 @@ class MessageController extends AbstractController
             $message->setSender($user);
             $message->setReceiver($receiver);
             $message->setAnnonce($annonce);
-            $message->setCreatedAt(new \DateTimeImmutable());
+            $message->setCreatedAt(new \DateTime());
 
             $em->persist($message);
             $em->flush();

@@ -9,25 +9,25 @@
             <p class="text-gray-500">{{ user.email }}</p>
         </div>
 
-        {# Bloc 1 : Statistiques #}
+        {# Bloc 1 : Statistiques dynamiques #}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div class="bg-white rounded-lg shadow p-6 text-center">
                 <p class="text-lg text-gray-600">Troc réalisés</p>
-                <p class="text-3xl font-bold text-green-600">12</p> {# à remplacer dynamiquement #}
+                <p class="text-3xl font-bold text-green-600">{{ trocRealisesCount }}</p>
             </div>
             <div class="bg-white rounded-lg shadow p-6 text-center">
                 <p class="text-lg text-gray-600">Troc en cours</p>
-                <p class="text-3xl font-bold text-yellow-500">3</p> {# idem #}
+                <p class="text-3xl font-bold text-yellow-500">{{ trocEnCoursCount }}</p>
             </div>
             <div class="bg-white rounded-lg shadow p-6 text-center">
                 <p class="text-lg text-gray-600">Messages reçus</p>
-                <p class="text-3xl font-bold text-blue-600">8</p> {# idem #}
+                <p class="text-3xl font-bold text-blue-600">{{ messagesRecus }}</p>
             </div>
         </div>
 
         {# Bloc 2 : Liens d’action #}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <a href="{{ path('app_home') }}" class="block bg-gray-100 rounded-lg shadow p-6 text-center hover:bg-gray-200 transition">
+            <a href="{{ path('mes_annonces') }}" class="block bg-gray-100 rounded-lg shadow p-6 text-center hover:bg-gray-200 transition">
                 <p class="text-lg font-semibold text-gray-700">Mes annonces</p>
             </a>
             <a href="{{ path('app_profile_edit') }}" class="block bg-gray-100 rounded-lg shadow p-6 text-center hover:bg-gray-200 transition">

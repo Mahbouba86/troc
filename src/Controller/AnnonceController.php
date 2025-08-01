@@ -6,7 +6,9 @@ use App\Entity\Annonce;
 use App\Entity\Category;
 use App\Form\AnnonceType;
 use App\Form\SearchAnnonceType;
+use App\Repository\AnnonceRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -63,6 +65,38 @@ class AnnonceController extends AbstractController
     public function show(Annonce $annonce): Response
     {
         return $this->render('annonce/show.html.twig', [
+            'annonce' => $annonce,
+        ]);
+    }
+    #[Route('/mes-annonces', name: 'mes_annonces')]
+    public function mesAnnonces(AnnonceRepository $annonceRepository, Security $security): Response
+    {
+        $user = $security->getUser();
+        $annonces = $annonceRepository->findBy(['user' => $user]);
+
+        return $this->render('annonce/mes_annonces.html.twig', [
+            'annonces' => $annonces,
+        ]);
+    }
+    #[Route('/annonce/{id}/edit', name: 'annonce_edit')]
+    public function edit(Request $request, Annonce $annonce, EntityManagerInterface $em): Response
+    {
+        // Optionnel : sécurité pour n’autoriser que l’auteur à modifier
+        if ($annonce->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $form = $this->createForm(AnnonceType::class, $annonce);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->flush();
+            $this->addFlash('success', 'Annonce modifiée avec succès.');
+            return $this->redirectToRoute('mes_annonces');
+        }
+
+        return $this->render('annonce/edit.html.twig', [
+            'form' => $form,
             'annonce' => $annonce,
         ]);
     }

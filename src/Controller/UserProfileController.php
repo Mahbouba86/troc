@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Entity\User;
+use Enum\Annonce\Status\AnnonceStatus;
+
 
 
 class UserProfileController extends AbstractController
@@ -33,10 +35,9 @@ class UserProfileController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $user = $this->getUser();
 
-        // Récupération des compteurs
         $messagesRecus = $messageRepository->countReceivedForUser($user);
-        $trocEnCoursCount = $annonceRepository->countByStatus($user, 'Réservé');
-        $trocRealisesCount = $annonceRepository->countByStatus($user, 'Troc effectué');
+        $trocEnCoursCount = $annonceRepository->countByStatus($user, AnnonceStatus::RESERVED->value);
+        $trocRealisesCount = $annonceRepository->countByStatus($user, AnnonceStatus::FINISHED->value);
 
         return $this->render('user_profile/index.html.twig', [
             'user' => $user,
@@ -45,6 +46,7 @@ class UserProfileController extends AbstractController
             'trocRealisesCount' => $trocRealisesCount,
         ]);
     }
+
 
 
     #[Route('/profil/modifier', name: 'app_profile_edit')]

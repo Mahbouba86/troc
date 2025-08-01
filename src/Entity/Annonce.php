@@ -59,6 +59,8 @@ class Annonce
     public function __construct()
     {
         $this->messages = new ArrayCollection();
+        $this->status = AnnonceStatus::PENDING;
+        $this->createdAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int

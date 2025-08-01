@@ -32,6 +32,7 @@ services:
         protocol: udp
     depends_on:
       - database
+      - maildev
 # Mercure is installed as a Caddy module, prevent the Flex recipe from installing another service
 ###> symfony/mercure-bundle ###
 ###< symfony/mercure-bundle ###
@@ -51,6 +52,12 @@ services:
       - "3306:3306"
 ###< doctrine/doctrine-bundle ###
   
+  maildev:
+    image: maildev/maildev
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+        
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: symfony-phpmyadmin
