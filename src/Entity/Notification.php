@@ -2,12 +2,13 @@
 
 namespace App\Entity;
 
+use AllowDynamicProperties;
 use App\Repository\NotificationRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\User;
 
-#[ORM\Entity(repositoryClass: NotificationRepository::class)]
+#[AllowDynamicProperties] #[ORM\Entity(repositoryClass: NotificationRepository::class)]
 class Notification
 {
     #[ORM\Id]
@@ -64,4 +65,17 @@ class Notification
         $this->user = $user;
         return $this;
     }
+
+    public function setCreatedAt(\DateTimeImmutable $createdAt): self
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+
+    public function setIsRead(bool $isRead): self
+    {
+        $this->isRead = $isRead;
+        return $this;
+    }
+
 }

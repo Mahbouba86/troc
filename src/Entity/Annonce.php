@@ -2,16 +2,12 @@
 
 namespace App\Entity;
 
-use App\Entity\Category;
-use App\Entity\User;
-use App\Entity\Message;
 use App\Repository\AnnonceRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Enum\Annonce\Status\AnnonceStatus;
-use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[ORM\Entity(repositoryClass: AnnonceRepository::class)]
 class Annonce
@@ -33,13 +29,15 @@ class Annonce
     #[ORM\Column(type: 'string', enumType: AnnonceStatus::class)]
     private ?AnnonceStatus $status = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $image = null;
+
 
     #[ORM\ManyToOne(inversedBy: 'annonces')]
     #[ORM\JoinColumn(nullable: false)]
     #[Ignore] // Empêche la récursion infinie via sérialisation
     private ?User $user = null;
+
+    #[ORM\OneToMany(mappedBy: 'annonce', targetEntity: Reservation::class)]
+    private Collection $reservations;
 
 
     #[ORM\ManyToOne(inversedBy: 'annonces')]
@@ -56,11 +54,18 @@ class Annonce
     #[ORM\Column(length: 255)]
     private ?string $ville = null;
 
+    /**
+     * @var Collection<int, Photo>
+     */
+    #[ORM\OneToMany(targetEntity: Photo::class, mappedBy: 'annonce', orphanRemoval: true)]
+    private Collection $photos;
+
     public function __construct()
     {
         $this->messages = new ArrayCollection();
         $this->status = AnnonceStatus::PENDING;
         $this->createdAt = new \DateTimeImmutable();
+        $this->photos = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -112,16 +117,6 @@ class Annonce
         return $this;
     }
 
-    public function getImage(): ?string
-    {
-        return $this->image;
-    }
-
-    public function setImage(string $image): static
-    {
-        $this->image = $image;
-        return $this;
-    }
 
     public function getUser(): ?User
     {
@@ -182,6 +177,36 @@ class Annonce
     public function setVille(string $ville): static
     {
         $this->ville = $ville;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Photo>
+     */
+    public function getPhotos(): Collection
+    {
+        return $this->photos;
+    }
+
+    public function addPhoto(Photo $photo): static
+    {
+        if (!$this->photos->contains($photo)) {
+            $this->photos->add($photo);
+            $photo->setAnnonce($this);
+        }
+
+        return $this;
+    }
+
+    public function removePhoto(Photo $photo): static
+    {
+        if ($this->photos->removeElement($photo)) {
+            // set the owning side to null (unless already changed)
+            if ($photo->getAnnonce() === $this) {
+                $photo->setAnnonce(null);
+            }
+        }
 
         return $this;
     }

@@ -40,8 +40,8 @@ class AnnonceCrudController extends AbstractCrudController
                 ->formatValue(fn ($value, $entity) => $value instanceof AnnonceStatus ? $value->value : (string) $value),
 
             ImageField::new('image')
-                ->setBasePath('uploads/images') // pour affichage dans EasyAdmin
-                ->setUploadDir('public/uploads/images') // répertoire d'upload
+                ->setBasePath('uploads/photos') // pour affichage dans EasyAdmin
+                ->setUploadDir('public/uploads/photos') // répertoire d'upload
                 ->setUploadedFileNamePattern('[slug]-[timestamp].[extension]') // nommage auto
                 ->setRequired(false),
         ];

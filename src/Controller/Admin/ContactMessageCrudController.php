@@ -66,12 +66,9 @@ class ContactMessageCrudController extends AbstractCrudController
             $mailerService->sendEmail($sender, $recipent, 'email de test', $reply); // this method should be in your MailerService
             $this->addFlash('success', 'Email envoyé avec succès !');
 
+
             // Redirect back to the detail page
-            return $this->redirect($this->generateUrl('admin', [
-                'crudControllerFqcn' => self::class,
-                'action' => 'list',
-                'entityId' => $message->getId(),
-            ]));
+            return $this->getRedirectResponseAfterSave($context, 'index');
         }
 
         return $this->render('admin/contactMessage/reply.html.twig', [

@@ -100,7 +100,6 @@ class AnnonceController extends AbstractController
             'annonce' => $annonce,
         ]);
     }
-
     #[Route('/annonce/new', name: 'annonce_new')]
     public function new(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
@@ -119,14 +118,19 @@ class AnnonceController extends AbstractController
 
                 try {
                     $imageFile->move(
-                        $this->getParameter('uploads_directory'),
+                        $this->getParameter('uploads_directory'), // ex: public/uploads/photos
                         $newFilename
                     );
                 } catch (FileException $e) {
                     $this->addFlash('error', 'Erreur lors de l\'upload de l\'image.');
                 }
 
-                $annonce->setImage($newFilename);
+                // ✅ Créer l'objet Photo et le lier à l'annonce
+                $photo = new \App\Entity\Photo();
+                $photo->setFilename($newFilename);
+                $photo->setIsMain(true); // ou false si c’est une galerie
+                $photo->setAnnonce($annonce);
+                $em->persist($photo);
             }
 
             $annonce->setUser($this->getUser());
@@ -142,4 +146,5 @@ class AnnonceController extends AbstractController
             'form' => $form->createView(),
         ]);
     }
+
 }

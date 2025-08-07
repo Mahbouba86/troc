@@ -11,6 +11,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\File;
 
 class AnnonceType extends AbstractType
 {
@@ -30,9 +31,16 @@ class AnnonceType extends AbstractType
                 'attr' => ['placeholder' => 'Ex : Paris'],
             ])
             ->add('image', FileType::class, [
-                'label' => 'Image',
+                'label' => 'Image principale',
                 'required' => false,
                 'mapped' => false,
+                'constraints' => [
+                    new File([
+                        'maxSize' => '2M',
+                        'mimeTypes' => ['image/jpeg', 'image/png', 'image/webp'],
+                        'mimeTypesMessage' => 'Veuillez envoyer une image valide (jpeg, png, webp).',
+                    ])
+                ]
             ])
             ->add('category', EntityType::class, [
                 'class' => Category::class,
