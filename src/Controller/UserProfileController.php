@@ -2,60 +2,90 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Form\UserProfileType;
 use App\Repository\AnnonceRepository;
 use App\Repository\MessageRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Enum\Annonce\Status\AnnonceStatus;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use App\Entity\User;
-use Enum\Annonce\Status\AnnonceStatus;
-
-
 
 class UserProfileController extends AbstractController
 {
-    #[Route('/utilisateur/{id}', name: 'user_profile')]
+    /**
+     * Profil PUBLIC d'un utilisateur (visible par tout le monde).
+     * Si l'utilisateur connecté visite sa propre page publique, on redirige vers /profil.
+     */
+    #[Route('/utilisateur/{id}', name: 'user_profile', methods: ['GET'])]
     public function publicProfile(User $user, AnnonceRepository $annonceRepository): Response
     {
-        $annonces = $annonceRepository->findBy(['user' => $user]);
+        // Si c'est moi, je vais sur mon profil privé
+        if ($this->getUser() && $this->getUser() === $user) {
+            return $this->redirectToRoute('app_profile');
+        }
 
-        return $this->render('user_profile/index.html.twig', [
-            'user' => $user,
-            'annonces' => $annonces,
+        $annonces = $annonceRepository->findBy(
+            ['user' => $user],
+            ['createdAt' => 'DESC']
+        );
+
+        // Stats publiques (adapte si tu veux masquer)
+        $trocEnCoursCount  = $annonceRepository->countByStatus($user, AnnonceStatus::RESERVED->value);
+        $trocRealisesCount = $annonceRepository->countByStatus($user, AnnonceStatus::FINISHED->value);
+
+        return $this->render('user_profile/public.html.twig', [
+            'user'               => $user,
+            'annonces'           => $annonces,
+            'trocEnCoursCount'   => $trocEnCoursCount,
+            'trocRealisesCount'  => $trocRealisesCount,
+            // pas de messagesRecus en public
         ]);
     }
-    #[Route('/profil', name: 'app_profile')]
-    public function index(
+
+    /**
+     * Mon profil PRIVÉ (nécessite connexion).
+     */
+    #[Route('/profil', name: 'app_profile', methods: ['GET'])]
+    public function myProfile(
         MessageRepository $messageRepository,
         AnnonceRepository $annonceRepository
     ): Response {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-        $user = $this->getUser();
+        /** @var User $me */
+        $me = $this->getUser();
 
-        $messagesRecus = $messageRepository->countReceivedForUser($user);
-        $trocEnCoursCount = $annonceRepository->countByStatus($user, AnnonceStatus::RESERVED->value);
-        $trocRealisesCount = $annonceRepository->countByStatus($user, AnnonceStatus::FINISHED->value);
+        $annonces = $annonceRepository->findBy(
+            ['user' => $me],
+            ['createdAt' => 'DESC']
+        );
+
+        $messagesRecus     = $messageRepository->countReceivedForUser($me);
+        $trocEnCoursCount  = $annonceRepository->countByStatus($me, AnnonceStatus::RESERVED->value);
+        $trocRealisesCount = $annonceRepository->countByStatus($me, AnnonceStatus::FINISHED->value);
 
         return $this->render('user_profile/index.html.twig', [
-            'user' => $user,
-            'messagesRecus' => $messagesRecus,
-            'trocEnCoursCount' => $trocEnCoursCount,
-            'trocRealisesCount' => $trocRealisesCount,
+            'user'               => $me,
+            'annonces'           => $annonces,
+            'messagesRecus'      => $messagesRecus,
+            'trocEnCoursCount'   => $trocEnCoursCount,
+            'trocRealisesCount'  => $trocRealisesCount,
         ]);
     }
 
-
-
-    #[Route('/profil/modifier', name: 'app_profile_edit')]
+    /**
+     * Édition de mon profil (PRIVÉ).
+     */
+    #[Route('/profil/modifier', name: 'app_profile_edit', methods: ['GET','POST'])]
     public function edit(Request $request, EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-        $user = $this->getUser();
+        /** @var User $me */
+        $me = $this->getUser();
 
-        $form = $this->createForm(UserProfileType::class, $user);
+        $form = $this->createForm(UserProfileType::class, $me);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

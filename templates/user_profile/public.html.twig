@@ -1,0 +1,63 @@
+{% extends 'user_profile/base.html.twig' %}
+
+{% block title %}Profil de {{ user.username }}{% endblock %}
+
+{% block body %}
+    <div class="max-w-7xl mx-auto p-6">
+        <!-- En-tête -->
+        <div class="bg-white rounded-xl shadow p-6 mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Profil de {{ user.username }}</h1>
+                    <p class="text-gray-600">Aperçu public</p>
+                </div>
+                {% if app.user and app.user.id == user.id %}
+                    <a href="{{ path('app_profile') }}"
+                       class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium">Voir mon espace</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Stats publiques -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+            <div class="bg-white rounded-xl shadow p-6">
+                <p class="text-sm text-gray-500">Trocs en cours</p>
+                <p class="text-3xl font-bold text-gray-900">{{ trocEnCoursCount ?? 0 }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow p-6">
+                <p class="text-sm text-gray-500">Trocs réalisés</p>
+                <p class="text-3xl font-bold text-gray-900">{{ trocRealisesCount ?? 0 }}</p>
+            </div>
+        </div>
+
+        <!-- Annonces de l'utilisateur -->
+        <div class="bg-white rounded-xl shadow p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Annonces de {{ user.username }}</h2>
+
+            {% if annonces is defined and annonces|length > 0 %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for annonce in annonces %}
+                        <a href="{{ path('annonce_show', { id: annonce.id }) }}"
+                           class="block bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 overflow-hidden transition">
+                            <div class="h-40 bg-gray-200">
+                                {% if annonce.image is defined and annonce.image %}
+                                    <img src="{{ asset('uploads/photos/' ~ annonce.image) }}" alt="{{ annonce.titre }}"
+                                         class="w-full h-full object-cover">
+                                {% else %}
+                                    <div class="w-full h-full flex items-center justify-center text-gray-500">Aucune image</div>
+                                {% endif %}
+                            </div>
+                            <div class="p-4">
+                                <h3 class="font-semibold text-gray-900 line-clamp-1">{{ annonce.titre }}</h3>
+                                <p class="text-sm text-gray-600 line-clamp-2 mt-1">{{ annonce.description }}</p>
+                                <p class="text-xs text-gray-500 mt-2">Publié le {{ annonce.createdAt|date('d/m/Y') }}</p>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-600">Aucune annonce publiée pour le moment.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

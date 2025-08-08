@@ -3,3 +3,6 @@ twig_component:
     defaults:
         # Namespace & directory for components
         App\Twig\Components\: 'components/'
+twig:
+    default_path: '%kernel.project_dir%/templates'
+    # (ou des paths additionnels)

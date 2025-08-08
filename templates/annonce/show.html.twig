@@ -1,50 +1,57 @@
-{% extends 'base.html.twig' %}
+{% extends '../user_profile/base.html.twig' %}
 
 {% block title %}{{ annonce.titre }}{% endblock %}
 
 {% block body %}
     <div class="max-w-7xl mx-auto mt-10 px-4">
 
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Image principale -->
-            <div class="relative h-96 md:h-auto">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden grid grid-cols-1 md:grid-cols-12 gap-6">
+            {# ----- Image principale ----- #}
+            <div class="relative md:col-span-5 rounded-lg overflow-hidden h-40 sm:h-48 md:h-56 lg:h-64">
                 {% set mainPhoto = null %}
                 {% for photo in annonce.photos %}
                     {% if mainPhoto is null and photo.isMain %}
                         {% set mainPhoto = photo %}
                     {% endif %}
                 {% endfor %}
+                {# Fallback: si aucune isMain, prendre la 1ère photo #}
+                {% if mainPhoto is null and annonce.photos|length > 0 %}
+                    {% set mainPhoto = annonce.photos|first %}
+                {% endif %}
 
                 {% if mainPhoto %}
-                    <img src="{{ asset('uploads/photos/' ~ mainPhoto.filename) }}"
-                         alt="Photo principale"
-                         class="object-cover w-full h-full">
+                    {% set mainPath = asset('uploads/photos/' ~ mainPhoto.filename) %}
+                    <a href="{{ mainPath }}" class="block w-full h-full" data-lightbox>
+                        <img src="{{ mainPath }}"
+                             alt="Photo principale"
+                             class="absolute inset-0 w-full h-full object-cover cursor-zoom-in">
+                    </a>
                 {% else %}
-                    <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+                    <div class="absolute inset-0 bg-gray-200 flex items-center justify-center text-gray-500">
                         Aucune image
                     </div>
                 {% endif %}
             </div>
 
-            <!-- Détails -->
-            <div class="p-8 flex flex-col justify-center bg-white">
+            {# ----- Détails ----- #}
+            <div class="md:col-span-7 p-6 md:p-8 flex flex-col justify-center bg-white">
                 <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ annonce.titre }}</h1>
 
-                <!-- Status -->
                 <div class="mb-2">
-                    <span class="inline-block px-3 py-1 rounded-full text-sm font-medium
-                        {% if annonce.status == 'Disponible' %}
-                            bg-green-100 text-green-800
-                        {% elseif annonce.status == 'Réservé' %}
-                            bg-yellow-100 text-yellow-800
-                        {% elseif annonce.status == 'Troc effectué' %}
-                            bg-gray-200 text-gray-700
-                        {% else %}
-                            bg-gray-100 text-gray-600
-                        {% endif %}
-                    ">
-                        {{ annonce.status.value }}
-                    </span>
+                <span class="inline-block px-3 py-1 rounded-full text-sm font-medium
+                    {% if annonce.status == 'Disponible' %}
+                        bg-green-100 text-green-800
+                    {% elseif annonce.status == 'Réservé' %}
+                        bg-yellow-100 text-yellow-800
+                    {% elseif annonce.status == 'Troc effectué' %}
+                        bg-gray-200 text-gray-700
+                    {% else %}
+                        bg-gray-100 text-gray-600
+                    {% endif %}
+                ">
+                    {# si status est un enum/string, adapte si besoin #}
+                    {{ annonce.status.value is defined ? annonce.status.value : annonce.status }}
+                </span>
                 </div>
 
                 <p class="text-gray-700 mb-4">{{ annonce.description }}</p>
@@ -61,18 +68,21 @@
                     </a>
                 </p>
 
-                <!-- Boutons -->
-                <div class="flex gap-4">
-                    <a href="{{ path('app_message_index', { id: annonce.id }) }}"
-                       class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-6 rounded-lg transition">
-                        Contacter
-                    </a>
-                    <a href="#"
-                       class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition">
-                        Réserver
-                    </a>
-                </div>
-                <!-- Galerie -->
+                {% if app.user != annonce.user %}
+                    <div class="flex gap-4">
+                        <a href="{{ path('app_message_index', { id: annonce.id }) }}"
+                           class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-6 rounded-lg transition">
+                            Contacter
+                        </a>
+
+                        <a href="{{ path('reservation_new', {id: annonce.id}) }}"
+                           class="inline-block bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-6 rounded-lg transition">
+                            Réserver
+                        </a>
+                    </div>
+                {% endif %}
+
+                {# ----- Galerie ----- #}
                 {% set galleryPhotos = [] %}
                 {% for photo in annonce.photos %}
                     {% if not photo.isMain %}
@@ -81,23 +91,29 @@
                 {% endfor %}
 
                 {% if galleryPhotos is not empty %}
-                <div class="mt-10 bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Galerie</h2>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {% for photo in galleryPhotos %}
-                            <img src="{{ asset('uploads/photos/' ~ photo.filename) }}"
-                                 alt="Photo de l'annonce"
-                                 class="w-full h-40 object-cover rounded shadow">
-                        {% endfor %}
+                    <div class="mt-8">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-3">Galerie</h2>
+
+                        {# “côte à côte” : flex + wrap, vignettes cliquables #}
+                        <div class="flex flex-wrap gap-3">
+                            {% for photo in galleryPhotos %}
+                                {% set p = asset('uploads/photos/' ~ photo.filename) %}
+                                <a href="{{ p }}" data-lightbox
+                                   class="block rounded overflow-hidden shadow w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32">
+                                    <img
+                                        src="{{ p }}"
+                                        alt="Photo de l'annonce"
+                                        class="w-full h-full object-cover cursor-zoom-in"
+                                    >
+                                </a>
+                            {% endfor %}
+                        </div>
                     </div>
+                {% endif %}
             </div>
         </div>
 
-
-            </div>
-        {% endif %}
-
-        <!-- Bloc Ville + Map -->
+        {# ----- Localisation ----- #}
         <div class="mt-10 bg-gray-50 p-6 rounded-lg shadow-md">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Localisation</h2>
 
@@ -105,7 +121,7 @@
                 Ville : <strong>{{ annonce.ville }}</strong>
             </p>
 
-            <div class="w-full h-64 rounded overflow-hidden">
+            <div class="w-full rounded overflow-hidden h-32 sm:h-40 md:h-44">
                 <iframe
                     class="w-full h-full"
                     frameborder="0"
@@ -118,4 +134,41 @@
             </div>
         </div>
     </div>
+
+    {# ----- Mini Lightbox sans dépendances ----- #}
+    <dialog id="lightboxDialog" class="backdrop:bg-black/70 p-0 rounded-lg overflow-hidden">
+        <img id="lightboxImg" src="" alt="" class="max-w-[90vw] max-h-[85vh] object-contain">
+    </dialog>
+
+    <script>
+        document.addEventListener('click', function (e) {
+            const a = e.target.closest('a[data-lightbox]');
+            if (!a) return;
+            e.preventDefault();
+
+            const dlg = document.getElementById('lightboxDialog');
+            const img = document.getElementById('lightboxImg');
+            img.src = a.getAttribute('href');
+
+            if (typeof dlg.showModal === 'function') {
+                dlg.showModal();
+                dlg.addEventListener('click', function onClick(ev) {
+                    // fermer si on clique en dehors de l'image
+                    const rect = img.getBoundingClientRect();
+                    if (
+                        ev.clientX < rect.left || ev.clientX > rect.right ||
+                        ev.clientY < rect.top || ev.clientY > rect.bottom
+                    ) {
+                        dlg.close();
+                    }
+                }, { once: true });
+                document.addEventListener('keydown', function onKey(ev) {
+                    if (ev.key === 'Escape') dlg.close();
+                }, { once: true });
+            } else {
+                // fallback vieux navigateurs : ouvrir dans un nouvel onglet
+                window.open(a.getAttribute('href'), '_blank', 'noopener');
+            }
+        });
+    </script>
 {% endblock %}

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Annonce;
 use App\Entity\Category;
+use App\Entity\Photo;
 use App\Form\AnnonceType;
 use App\Form\SearchAnnonceType;
 use App\Repository\AnnonceRepository;
@@ -26,14 +27,11 @@ class AnnonceController extends AbstractController
 
         $qb = $em->getRepository(Annonce::class)->createQueryBuilder('a');
 
-        // ➕ Si une catégorie est passée via l'URL (clic sur image)
         $categoryId = $request->query->get('category');
         if ($categoryId) {
-            $qb->andWhere('a.category = :cat')
-                ->setParameter('cat', $categoryId);
+            $qb->andWhere('a.category = :cat')->setParameter('cat', $categoryId);
         }
 
-        // ➕ Si le formulaire est soumis
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
 
@@ -48,10 +46,7 @@ class AnnonceController extends AbstractController
             }
         }
 
-        // 🔁 Résultats
         $annonces = $qb->orderBy('a.createdAt', 'DESC')->getQuery()->getResult();
-
-        // 📦 Récupérer toutes les catégories pour affichage en haut
         $categories = $em->getRepository(Category::class)->findAll();
 
         return $this->render('annonce/index.html.twig', [
@@ -68,6 +63,7 @@ class AnnonceController extends AbstractController
             'annonce' => $annonce,
         ]);
     }
+
     #[Route('/mes-annonces', name: 'mes_annonces')]
     public function mesAnnonces(AnnonceRepository $annonceRepository, Security $security): Response
     {
@@ -78,10 +74,10 @@ class AnnonceController extends AbstractController
             'annonces' => $annonces,
         ]);
     }
+
     #[Route('/annonce/{id}/edit', name: 'annonce_edit')]
-    public function edit(Request $request, Annonce $annonce, EntityManagerInterface $em): Response
+    public function edit(Request $request, Annonce $annonce, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
-        // Optionnel : sécurité pour n’autoriser que l’auteur à modifier
         if ($annonce->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
         }
@@ -90,16 +86,41 @@ class AnnonceController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $uploadedFiles = $form->get('photos')->getData();
+
+            foreach ($uploadedFiles as $uploadedFile) {
+                $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
+                $safeFilename = $slugger->slug($originalFilename);
+                $newFilename = $safeFilename . '-' . uniqid() . '.' . $uploadedFile->guessExtension();
+
+                try {
+                    $uploadedFile->move(
+                        $this->getParameter('uploads_directory'),
+                        $newFilename
+                    );
+                } catch (FileException $e) {
+                    $this->addFlash('error', 'Erreur lors de l\'upload d\'une image.');
+                    continue;
+                }
+
+                $photo = new Photo();
+                $photo->setFilename($newFilename);
+                $photo->setAnnonce($annonce);
+
+                $em->persist($photo);
+            }
+
             $em->flush();
             $this->addFlash('success', 'Annonce modifiée avec succès.');
             return $this->redirectToRoute('mes_annonces');
         }
 
         return $this->render('annonce/edit.html.twig', [
-            'form' => $form,
+            'form' => $form->createView(),
             'annonce' => $annonce,
         ]);
     }
+
     #[Route('/annonce/new', name: 'annonce_new')]
     public function new(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
@@ -109,42 +130,46 @@ class AnnonceController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $imageFile = $form->get('image')->getData();
+            $annonce->setUser($this->getUser());
+            $annonce->setCreatedAt(new \DateTimeImmutable());
 
-            if ($imageFile) {
-                $originalFilename = pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME);
+            $uploadedFiles = $form->get('photos')->getData();
+            $first = true;
+
+            foreach ($uploadedFiles as $uploadedFile) {
+                $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
                 $safeFilename = $slugger->slug($originalFilename);
-                $newFilename = $safeFilename . '-' . uniqid() . '.' . $imageFile->guessExtension();
+                $newFilename = $safeFilename . '-' . uniqid() . '.' . $uploadedFile->guessExtension();
 
                 try {
-                    $imageFile->move(
-                        $this->getParameter('uploads_directory'), // ex: public/uploads/photos
+                    $uploadedFile->move(
+                        $this->getParameter('uploads_directory'),
                         $newFilename
                     );
                 } catch (FileException $e) {
                     $this->addFlash('error', 'Erreur lors de l\'upload de l\'image.');
+                    continue;
                 }
 
-                // ✅ Créer l'objet Photo et le lier à l'annonce
-                $photo = new \App\Entity\Photo();
+                $photo = new Photo();
                 $photo->setFilename($newFilename);
-                $photo->setIsMain(true); // ou false si c’est une galerie
                 $photo->setAnnonce($annonce);
-                $em->persist($photo);
-            }
 
-            $annonce->setUser($this->getUser());
-            $annonce->setCreatedAt(new \DateTimeImmutable());
+                // Marquer la première comme principale plus tard si besoin
+                $em->persist($photo);
+                $first = false;
+            }
 
             $em->persist($annonce);
             $em->flush();
 
-            return $this->redirectToRoute('app_home');
+            $this->addFlash('success', 'Annonce créée avec succès.');
+            return $this->redirectToRoute('annonce_new');
         }
 
         return $this->render('annonce/new.html.twig', [
             'form' => $form->createView(),
         ]);
     }
-
 }
+

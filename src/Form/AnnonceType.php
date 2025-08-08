@@ -11,43 +11,24 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Validator\Constraints\File;
 
 class AnnonceType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('titre', TextType::class, [
-                'label' => 'Titre',
-                'attr' => ['placeholder' => 'Ex : Propose aide au déménagement']
-            ])
-            ->add('description', TextareaType::class, [
-                'label' => 'Description',
-                'attr' => ['placeholder' => 'Décrivez le service ou le besoin']
-            ])
-            ->add('ville', TextType::class, [
-                'label' => 'Ville',
-                'attr' => ['placeholder' => 'Ex : Paris'],
-            ])
-            ->add('image', FileType::class, [
-                'label' => 'Image principale',
-                'required' => false,
-                'mapped' => false,
-                'constraints' => [
-                    new File([
-                        'maxSize' => '2M',
-                        'mimeTypes' => ['image/jpeg', 'image/png', 'image/webp'],
-                        'mimeTypesMessage' => 'Veuillez envoyer une image valide (jpeg, png, webp).',
-                    ])
-                ]
-            ])
+            ->add('titre', TextType::class)
+            ->add('description', TextareaType::class)
+            ->add('ville', TextType::class)
             ->add('category', EntityType::class, [
                 'class' => Category::class,
                 'choice_label' => 'name',
-                'label' => 'Catégorie',
-                'placeholder' => 'Choisir une catégorie',
-                'required' => true,
+            ])
+            ->add('photos', FileType::class, [
+                'label' => 'Ajoutez des photos',
+                'mapped' => false,
+                'multiple' => true,
+                'required' => false,
             ]);
     }
 
@@ -58,3 +39,4 @@ class AnnonceType extends AbstractType
         ]);
     }
 }
+

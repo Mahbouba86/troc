@@ -1,4 +1,4 @@
-{% extends 'base.html.twig' %}
+{% extends '../user_profile/base.html.twig' %}
 
 {% block title %}Mes annonces{% endblock %}
 
@@ -20,7 +20,12 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {% for annonce in annonces %}
                     <div class="bg-white rounded-lg shadow overflow-hidden">
-                        <img src="{{ asset('uploads/photos/' ~ annonce.image) }}"
+                        {% set mainPhoto = annonce.photos|first %}
+                        {% if mainPhoto %}
+                            <img src="{{ asset('uploads/photos/' ~ mainPhoto.filename) }}" alt="Photo de l'annonce" class="rounded-lg">
+                        {% else %}
+                            <img src="{{ asset('uploads/default.jpg') }}" alt="Aucune image" class="rounded-lg">
+                        {% endif %}
                              alt="{{ annonce.titre }}"
                              class="w-full h-48 object-cover">
 

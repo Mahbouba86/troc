@@ -1,35 +1,18 @@
 {% extends '../user_profile/base.html.twig' %}
 
-{% block title %}Créer une annonce{% endblock %}
+{% block title %}Modifier l'annonce{% endblock %}
 
 {% block body %}
-
-    {# Affichage des messages flash #}
-    {% for label, messages in app.flashes %}
-        {% for message in messages %}
-            <div class="my-4 px-4 py-3 rounded
-                {% if label == 'success' %}
-                    bg-green-100 border border-green-300 text-green-800
-                {% elseif label == 'error' %}
-                    bg-red-100 border border-red-300 text-red-800
-                {% endif %}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endfor %}
-
     <div class="max-w-xl mx-auto p-6">
         <div class="text-center mb-10">
             <h1 class="text-3xl font-bold text-gray-900">
-                Créez votre annonce<br>
+                Modifier votre annonce<br>
                 <span class="text-blue-600">en toute simplicité</span>
             </h1>
         </div>
 
-        {{ form_start(form, {'attr': {
-            'class': 'space-y-6',
-            'enctype': 'multipart/form-data'
-        }}) }}
+        {{ form_start(form, {'attr': {'class': 'space-y-6', 'enctype': 'multipart/form-data'}}) }}
+
         {{ form_errors(form) }}
 
         <div class="flex flex-col gap-2">
@@ -67,7 +50,7 @@
             {{ form_errors(form.category) }}
         </div>
 
-        {# --------- PHOTOS MULTIPLES --------- #}
+        {# ----------- PHOTOS MULTIPLES (upload) ----------- #}
         <div class="flex flex-col gap-2">
             <label class="font-semibold text-sm text-gray-700">Photos</label>
             {{ form_widget(form.photos, {'attr': {
@@ -77,9 +60,8 @@
             {{ form_errors(form.photos) }}
         </div>
 
-        <button type="submit"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-center">
-            Publier l'annonce
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-center">
+            Enregistrer les modifications
         </button>
 
         {{ form_end(form) }}

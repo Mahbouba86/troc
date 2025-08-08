@@ -1,3 +1,4 @@
+{# templates/user_profile/base.html.twig #}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -5,9 +6,11 @@
     <title>{% block title %}Mon site{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {% block stylesheets %}
-        {{ encore_entry_link_tags('app_css') }}
-    {% endblock %}
+    {# CSS géré par AssetMapper (ex: assets/styles/app.css) #}
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+
+    {# Hook optionnel pour des styles page-spécifiques #}
+    {% block stylesheets %}{% endblock %}
 </head>
 
 <body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col">
@@ -40,6 +43,10 @@
     <p>&copy; {{ "now"|date("Y") }} Service Troc - Tous droits réservés</p>
 </footer>
 
-<script src="{{ asset('app.js') }}"></script>
+{# JS via Importmap (ton entry s’appelle généralement "app") #}
+{{ importmap('app') }}
+
+{# Hook optionnel pour des scripts page-spécifiques #}
+{% block javascripts %}{% endblock %}
 </body>
 </html>
