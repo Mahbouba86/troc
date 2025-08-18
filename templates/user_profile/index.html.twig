@@ -1,4 +1,4 @@
-{% extends 'base.html.twig' %}
+{% extends 'user_profile/base.html.twig' %}
 
 {% block title %}Mon profil{% endblock %}
 
@@ -25,6 +25,158 @@
             </div>
         </div>
 
+        {# Bloc A : Demandes de réservation en attente (reçues en tant que PROPRIÉTAIRE) #}
+        <div class="bg-white rounded-lg shadow p-6 mb-10">
+            <h2 class="text-xl font-semibold mb-4">
+                Demandes de réservation en attente
+            </h2>
+
+            {% if reservationsEnAttente is defined and reservationsEnAttente|length > 0 %}
+                <ul class="divide-y">
+                    {% for reservation in reservationsEnAttente %}
+                        <li class="py-3 flex items-center justify-between gap-4">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                      En attente
+                                    </span>
+                                    <a href="{{ path('annonce_show', { id: reservation.annonce.id }) }}"
+                                       class="font-medium text-gray-900 hover:underline truncate">
+                                        {{ reservation.annonce.titre }}
+                                    </a>
+                                </div>
+                                <div class="text-sm text-gray-600">
+                                    Demande de
+                                    <a href="{{ path('user_profile', { id: reservation.user.id }) }}"
+                                       class="text-blue-600 hover:underline">
+                                        {{ reservation.user.username }}
+                                    </a>
+                                    • le {{ reservation.createdAt|date('d/m/Y H:i') }}
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 shrink-0">
+                                {# Discuter au sujet de cette annonce #}
+                                <a href="{{ path('app_message_index', { id: reservation.annonce.id }) }}"
+                                   class="px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm"
+                                   aria-label="Discuter au sujet de {{ reservation.annonce.titre }}">
+                                    Discuter
+                                </a>
+
+                                {# Boutons avec popup de confirmation #}
+                                <button
+                                    type="button"
+                                    class="px-3 py-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm"
+                                    onclick="confirmModeration(
+                                        'accept-{{ reservation.id }}',
+                                        'Accepter la demande',
+                                        'Confirmer l’acceptation de la demande de {{ reservation.user.username|e('js') }} ?',
+                                        'Accepter',
+                                        'success'
+                                        )"
+                                    aria-label="Accepter la demande de {{ reservation.user.username }}">
+                                    Accepter
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm"
+                                    onclick="confirmModeration(
+                                        'decline-{{ reservation.id }}',
+                                        'Refuser la demande',
+                                        'Refuser la demande de {{ reservation.user.username|e('js') }} ?',
+                                        'Refuser',
+                                        'warning'
+                                        )"
+                                    aria-label="Refuser la demande de {{ reservation.user.username }}">
+                                    Refuser
+                                </button>
+                            </div>
+                        </li>
+
+                        {# --- Formulaires DÉTACHÉS (un par action) --- #}
+                        <form id="accept-{{ reservation.id }}" method="post"
+                              action="{{ path('reservation_accept', { id: reservation.id }) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('reservation_accept_' ~ reservation.id) }}">
+                            <input type="submit" hidden>
+                        </form>
+
+                        <form id="decline-{{ reservation.id }}" method="post"
+                              action="{{ path('reservation_decline', { id: reservation.id }) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('reservation_decline_' ~ reservation.id) }}">
+                            <input type="submit" hidden>
+                        </form>
+                        {# --- /Formulaires détachés --- #}
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-500 text-sm">Aucune demande pour le moment.</p>
+            {% endif %}
+        </div>
+
+        {# Bloc B : MES demandes de réservation (envoyées en tant que DEMANDEUR) #}
+        <div class="bg-white rounded-lg shadow p-6 mb-10">
+            <h2 class="text-xl font-semibold mb-4">
+                Mes demandes de réservation
+            </h2>
+
+            {% if mesReservations is defined and mesReservations|length > 0 %}
+                <ul class="divide-y">
+                    {% for r in mesReservations %}
+                        {% set s = r.statut.value is defined ? r.statut.value : r.statut %}
+                        <li class="py-3 flex items-center justify-between gap-4">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    {# Badge status #}
+                                    {% if s == 'Pending' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                                            En attente
+                                        </span>
+                                    {% elseif s == 'Accepted' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                            Acceptée
+                                        </span>
+                                    {% elseif s == 'Refused' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                            Refusée
+                                        </span>
+                                    {% elseif s == 'Cancelled' %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                            Annulée
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                            {{ s }}
+                                        </span>
+                                    {% endif %}
+
+                                    <a href="{{ path('annonce_show', { id: r.annonce.id }) }}"
+                                       class="font-medium text-gray-900 hover:underline truncate">
+                                        {{ r.annonce.titre }}
+                                    </a>
+                                </div>
+                                <div class="text-sm text-gray-600">
+                                    Envoyée le {{ r.createdAt|date('d/m/Y H:i') }}
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 shrink-0">
+                                {% if s == 'Accepted' %}
+                                    <a href="{{ path('app_message_index', { id: r.annonce.id }) }}"
+                                       class="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                                       aria-label="Discuter au sujet de {{ r.annonce.titre }}">
+                                        Discuter
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-gray-500 text-sm">Aucune demande envoyée.</p>
+            {% endif %}
+        </div>
+
         {# Bloc 2 : Liens d’action #}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <a href="{{ path('mes_annonces') }}" class="block bg-gray-100 rounded-lg shadow p-6 text-center hover:bg-gray-200 transition">
@@ -38,4 +190,80 @@
             </a>
         </div>
     </div>
+
+    {# ---------- SweetAlert2 + helpers (confirm + toasts) ---------- #}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function confirmModeration(formId, title, text, confirmText, mode) {
+            Swal.fire({
+                title: title,
+                text: text,
+                icon: mode === 'success' ? 'question' : 'warning',
+                showCancelButton: true,
+                confirmButtonText: confirmText,
+                cancelButtonText: 'Annuler',
+                buttonsStyling: false,
+                customClass: {
+                    popup: 'rounded-xl shadow-lg p-6',
+                    title: 'text-xl font-bold text-gray-900',
+                    htmlContainer: 'text-gray-700',
+                    confirmButton: (mode === 'success'
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-red-600 hover:bg-red-700') + ' text-white font-semibold py-2 px-4 rounded-lg mr-2',
+                    cancelButton: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Traitement en cours…',
+                        didOpen: () => { Swal.showLoading(); },
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        backdrop: true,
+                        customClass: { popup: 'rounded-xl p-6' }
+                    });
+                    const form = document.getElementById(formId);
+                    if (form) form.submit();
+                }
+            });
+        }
+
+        function showFlash(type, message) {
+            const icon = (type === 'danger' || type === 'error') ? 'error'
+                : (type === 'info' ? 'info'
+                    : (type === 'warning' ? 'warning' : 'success'));
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: icon,
+                title: message,
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+                buttonsStyling: false,
+                customClass: {
+                    popup: 'rounded-lg shadow-lg',
+                    title: 'text-sm font-medium text-gray-800'
+                }
+            });
+        }
+    </script>
+
+    {# Toaster pour les addFlash du contrôleur #}
+    {% for msg in app.flashes('success') %}
+        <script>showFlash('success', '{{ msg|e('js') }}');</script>
+    {% endfor %}
+    {% for msg in app.flashes('info') %}
+        <script>showFlash('info', '{{ msg|e('js') }}');</script>
+    {% endfor %}
+    {% for msg in app.flashes('warning') %}
+        <script>showFlash('warning', '{{ msg|e('js') }}');</script>
+    {% endfor %}
+    {% for msg in app.flashes('danger') %}
+        <script>showFlash('danger', '{{ msg|e('js') }}');</script>
+    {% endfor %}
+    {% for msg in app.flashes('error') %}
+        <script>showFlash('error', '{{ msg|e('js') }}');</script>
+    {% endfor %}
 {% endblock %}

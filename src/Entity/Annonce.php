@@ -8,6 +8,13 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Enum\Annonce\Status\AnnonceStatus;
+use App\Entity\Reservation;
+use App\Entity\User;
+use App\Entity\Category;
+use App\Entity\Message;
+use App\Entity\Photo;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\Ignore;
 
 #[ORM\Entity(repositoryClass: AnnonceRepository::class)]
 class Annonce
@@ -29,43 +36,38 @@ class Annonce
     #[ORM\Column(type: 'string', enumType: AnnonceStatus::class)]
     private ?AnnonceStatus $status = null;
 
-
-
     #[ORM\ManyToOne(inversedBy: 'annonces')]
     #[ORM\JoinColumn(nullable: false)]
     #[Ignore] // Empêche la récursion infinie via sérialisation
     private ?User $user = null;
 
+    /** @var Collection<int, Reservation> */
     #[ORM\OneToMany(mappedBy: 'annonce', targetEntity: Reservation::class)]
     private Collection $reservations;
-
 
     #[ORM\ManyToOne(inversedBy: 'annonces')]
     #[ORM\JoinColumn(nullable: false)]
     #[Assert\NotNull(message: 'Vous devez sélectionner une catégorie.')]
     private ?Category $category = null;
 
-    /**
-     * @var Collection<int, Message>
-     */
+    /** @var Collection<int, Message> */
     #[ORM\OneToMany(targetEntity: Message::class, mappedBy: 'annonce', orphanRemoval: true)]
     private Collection $messages;
 
     #[ORM\Column(length: 255)]
     private ?string $ville = null;
 
-    /**
-     * @var Collection<int, Photo>
-     */
+    /** @var Collection<int, Photo> */
     #[ORM\OneToMany(targetEntity: Photo::class, mappedBy: 'annonce', orphanRemoval: true)]
     private Collection $photos;
 
     public function __construct()
     {
         $this->messages = new ArrayCollection();
+        $this->reservations = new ArrayCollection();
+        $this->photos = new ArrayCollection();
         $this->status = AnnonceStatus::PENDING;
         $this->createdAt = new \DateTimeImmutable();
-        $this->photos = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -117,7 +119,6 @@ class Annonce
         return $this;
     }
 
-
     public function getUser(): ?User
     {
         return $this->user;
@@ -140,9 +141,7 @@ class Annonce
         return $this;
     }
 
-    /**
-     * @return Collection<int, Message>
-     */
+    /** @return Collection<int, Message> */
     public function getMessages(): Collection
     {
         return $this->messages;
@@ -154,7 +153,6 @@ class Annonce
             $this->messages->add($message);
             $message->setAnnonce($this);
         }
-
         return $this;
     }
 
@@ -165,7 +163,6 @@ class Annonce
                 $message->setAnnonce(null);
             }
         }
-
         return $this;
     }
 
@@ -177,13 +174,10 @@ class Annonce
     public function setVille(string $ville): static
     {
         $this->ville = $ville;
-
         return $this;
     }
 
-    /**
-     * @return Collection<int, Photo>
-     */
+    /** @return Collection<int, Photo> */
     public function getPhotos(): Collection
     {
         return $this->photos;
@@ -195,19 +189,41 @@ class Annonce
             $this->photos->add($photo);
             $photo->setAnnonce($this);
         }
-
         return $this;
     }
 
     public function removePhoto(Photo $photo): static
     {
         if ($this->photos->removeElement($photo)) {
-            // set the owning side to null (unless already changed)
             if ($photo->getAnnonce() === $this) {
                 $photo->setAnnonce(null);
             }
         }
+        return $this;
+    }
 
+    /** @return Collection<int, Reservation> */
+    public function getReservations(): Collection
+    {
+        return $this->reservations;
+    }
+
+    public function addReservation(Reservation $reservation): static
+    {
+        if (!$this->reservations->contains($reservation)) {
+            $this->reservations->add($reservation);
+            $reservation->setAnnonce($this);
+        }
+        return $this;
+    }
+
+    public function removeReservation(Reservation $reservation): static
+    {
+        if ($this->reservations->removeElement($reservation)) {
+            if ($reservation->getAnnonce() === $this) {
+                $reservation->setAnnonce(null);
+            }
+        }
         return $this;
     }
 }

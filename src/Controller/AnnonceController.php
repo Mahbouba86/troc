@@ -17,6 +17,10 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
+// Si tu utilises l'ENUM pour le statut, garde cet use.
+// S'il n'existe pas dans ton projet, tu peux supprimer cette ligne.
+use Enum\Annonce\Status\AnnonceStatus;
+
 class AnnonceController extends AbstractController
 {
     #[Route('/annonces', name: 'annonce_index')]
@@ -59,8 +63,44 @@ class AnnonceController extends AbstractController
     #[Route('/annonce/{id}', name: 'annonce_show', requirements: ['id' => '\d+'])]
     public function show(Annonce $annonce): Response
     {
+        // Détecte s'il existe déjà une réservation active (PENDING/RESERVED) pour l'utilisateur courant
+        $hasMyActiveReservation = false;
+        $user = $this->getUser();
+
+        if ($user) {
+            // Valeurs à considérer comme "actives"
+            $activeValues = ['PENDING', 'RESERVED'];
+
+            // Si tu as un enum AnnonceStatus avec ->value, on préfère ses valeurs
+            if (class_exists(AnnonceStatus::class)) {
+                try {
+                    $activeValues = [
+                        \is_object(AnnonceStatus::PENDING) && method_exists(AnnonceStatus::PENDING, 'value')
+                            ? AnnonceStatus::PENDING->value : 'PENDING',
+                        \is_object(AnnonceStatus::RESERVED) && method_exists(AnnonceStatus::RESERVED, 'value')
+                            ? AnnonceStatus::RESERVED->value : 'RESERVED',
+                    ];
+                } catch (\Throwable $e) {
+                    // En cas d’erreur, on garde le fallback ['PENDING','RESERVED']
+                }
+            }
+
+            foreach ($annonce->getReservations() as $r) {
+                if ($r->getUser() === $user) {
+                    $statut = $r->getStatut();
+                    // Normalise le statut en string
+                    $statusValue = (\is_object($statut) && method_exists($statut, 'value')) ? $statut->value : $statut;
+                    if (\in_array($statusValue, $activeValues, true)) {
+                        $hasMyActiveReservation = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         return $this->render('annonce/show.html.twig', [
             'annonce' => $annonce,
+            'hasMyActiveReservation' => $hasMyActiveReservation, // <- utilisé dans le Twig pour désactiver le bouton
         ]);
     }
 
@@ -134,7 +174,6 @@ class AnnonceController extends AbstractController
             $annonce->setCreatedAt(new \DateTimeImmutable());
 
             $uploadedFiles = $form->get('photos')->getData();
-            $first = true;
 
             foreach ($uploadedFiles as $uploadedFile) {
                 $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
@@ -155,9 +194,7 @@ class AnnonceController extends AbstractController
                 $photo->setFilename($newFilename);
                 $photo->setAnnonce($annonce);
 
-                // Marquer la première comme principale plus tard si besoin
                 $em->persist($photo);
-                $first = false;
             }
 
             $em->persist($annonce);
@@ -172,4 +209,3 @@ class AnnonceController extends AbstractController
         ]);
     }
 }
-
