@@ -9,7 +9,7 @@ use App\Form\MessageType;
 use App\Repository\MessageRepository;
 use App\Repository\AnnonceRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Enum\Annonce\Status\AnnonceStatus; // adapte le namespace si besoin
+use App\Enum\Annonce\AnnonceStatus;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

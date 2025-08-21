@@ -7,12 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Enum\Annonce\Status\AnnonceStatus;
-use App\Entity\Reservation;
-use App\Entity\User;
-use App\Entity\Category;
-use App\Entity\Message;
-use App\Entity\Photo;
+use App\Enum\Annonce\AnnonceStatus; // <-- CORRIGÉ : App\Enum\Annonce\AnnonceStatus
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Ignore;
 
@@ -33,16 +28,17 @@ class Annonce
     #[ORM\Column(type: Types::TEXT)]
     private ?string $description = null;
 
-    #[ORM\Column(type: 'string', enumType: AnnonceStatus::class)]
-    private ?AnnonceStatus $status = null;
+    // Mapping ENUM natif Doctrine
+    #[ORM\Column(type: Types::STRING, length: 20, enumType: AnnonceStatus::class)]
+    private AnnonceStatus $status; // <-- non-nullable côté PHP (aligne-toi avec nullable=false)
 
     #[ORM\ManyToOne(inversedBy: 'annonces')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Ignore] // Empêche la récursion infinie via sérialisation
+    #[Ignore]
     private ?User $user = null;
 
     /** @var Collection<int, Reservation> */
-    #[ORM\OneToMany(mappedBy: 'annonce', targetEntity: Reservation::class)]
+    #[ORM\OneToMany(targetEntity: Reservation::class, mappedBy: 'annonce')]
     private Collection $reservations;
 
     #[ORM\ManyToOne(inversedBy: 'annonces')]
@@ -58,7 +54,13 @@ class Annonce
     private ?string $ville = null;
 
     /** @var Collection<int, Photo> */
-    #[ORM\OneToMany(targetEntity: Photo::class, mappedBy: 'annonce', orphanRemoval: true)]
+    #[ORM\OneToMany(
+        targetEntity: Photo::class,
+        mappedBy: 'annonce',
+        cascade: ['persist', 'remove'],
+        orphanRemoval: true
+    )]
+    #[ORM\OrderBy(['isMain' => 'DESC', 'id' => 'ASC'])]
     private Collection $photos;
 
     public function __construct()
@@ -66,87 +68,34 @@ class Annonce
         $this->messages = new ArrayCollection();
         $this->reservations = new ArrayCollection();
         $this->photos = new ArrayCollection();
-        $this->status = AnnonceStatus::PENDING;
+
+        // Valeurs par défaut
+        $this->status = AnnonceStatus::PENDING; // <-- ok si tu gardes cet état dans l'enum
         $this->createdAt = new \DateTimeImmutable();
     }
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
+    public function getId(): ?int { return $this->id; }
 
-    public function getTitre(): ?string
-    {
-        return $this->titre;
-    }
+    public function getTitre(): ?string { return $this->titre; }
+    public function setTitre(string $titre): static { $this->titre = $titre; return $this; }
 
-    public function setTitre(string $titre): static
-    {
-        $this->titre = $titre;
-        return $this;
-    }
+    public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
+    public function getDescription(): ?string { return $this->description; }
+    public function setDescription(string $description): static { $this->description = $description; return $this; }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-        return $this;
-    }
+    public function getStatus(): AnnonceStatus { return $this->status; }
+    public function setStatus(AnnonceStatus $status): static { $this->status = $status; return $this; }
 
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
+    public function getUser(): ?User { return $this->user; }
+    public function setUser(?User $user): static { $this->user = $user; return $this; }
 
-    public function setDescription(string $description): static
-    {
-        $this->description = $description;
-        return $this;
-    }
-
-    public function getStatus(): ?AnnonceStatus
-    {
-        return $this->status;
-    }
-
-    public function setStatus(?AnnonceStatus $status): static
-    {
-        $this->status = $status;
-        return $this;
-    }
-
-    public function getUser(): ?User
-    {
-        return $this->user;
-    }
-
-    public function setUser(?User $user): static
-    {
-        $this->user = $user;
-        return $this;
-    }
-
-    public function getCategory(): ?Category
-    {
-        return $this->category;
-    }
-
-    public function setCategory(?Category $category): static
-    {
-        $this->category = $category;
-        return $this;
-    }
+    public function getCategory(): ?Category { return $this->category; }
+    public function setCategory(?Category $category): static { $this->category = $category; return $this; }
 
     /** @return Collection<int, Message> */
-    public function getMessages(): Collection
-    {
-        return $this->messages;
-    }
-
+    public function getMessages(): Collection { return $this->messages; }
     public function addMessage(Message $message): static
     {
         if (!$this->messages->contains($message)) {
@@ -155,33 +104,19 @@ class Annonce
         }
         return $this;
     }
-
     public function removeMessage(Message $message): static
     {
-        if ($this->messages->removeElement($message)) {
-            if ($message->getAnnonce() === $this) {
-                $message->setAnnonce(null);
-            }
+        if ($this->messages->removeElement($message) && $message->getAnnonce() === $this) {
+            $message->setAnnonce(null);
         }
         return $this;
     }
 
-    public function getVille(): ?string
-    {
-        return $this->ville;
-    }
-
-    public function setVille(string $ville): static
-    {
-        $this->ville = $ville;
-        return $this;
-    }
+    public function getVille(): ?string { return $this->ville; }
+    public function setVille(string $ville): static { $this->ville = $ville; return $this; }
 
     /** @return Collection<int, Photo> */
-    public function getPhotos(): Collection
-    {
-        return $this->photos;
-    }
+    public function getPhotos(): Collection { return $this->photos; }
 
     public function addPhoto(Photo $photo): static
     {
@@ -194,20 +129,14 @@ class Annonce
 
     public function removePhoto(Photo $photo): static
     {
-        if ($this->photos->removeElement($photo)) {
-            if ($photo->getAnnonce() === $this) {
-                $photo->setAnnonce(null);
-            }
+        if ($this->photos->removeElement($photo) && $photo->getAnnonce() === $this) {
+            $photo->setAnnonce(null);
         }
         return $this;
     }
 
     /** @return Collection<int, Reservation> */
-    public function getReservations(): Collection
-    {
-        return $this->reservations;
-    }
-
+    public function getReservations(): Collection { return $this->reservations; }
     public function addReservation(Reservation $reservation): static
     {
         if (!$this->reservations->contains($reservation)) {
@@ -216,14 +145,42 @@ class Annonce
         }
         return $this;
     }
-
     public function removeReservation(Reservation $reservation): static
     {
-        if ($this->reservations->removeElement($reservation)) {
-            if ($reservation->getAnnonce() === $this) {
-                $reservation->setAnnonce(null);
-            }
+        if ($this->reservations->removeElement($reservation) && $reservation->getAnnonce() === $this) {
+            $reservation->setAnnonce(null);
         }
         return $this;
+    }
+
+    // ---------- Helpers pour la photo principale ----------
+    public function getMainPhoto(): ?Photo
+    {
+        foreach ($this->photos as $p) {
+            if ($p->isMain()) {
+                return $p;
+            }
+        }
+        return null;
+    }
+
+    public function clearMainPhoto(): void
+    {
+        foreach ($this->photos as $p) {
+            if ($p->isMain()) {
+                $p->setIsMain(false);
+            }
+        }
+    }
+
+    public function setMainPhotoById(int $photoId): void
+    {
+        $this->clearMainPhoto();
+        foreach ($this->photos as $p) {
+            if ($p->getId() === $photoId) {
+                $p->setIsMain(true);
+                break;
+            }
+        }
     }
 }

@@ -1,18 +1,15 @@
-{% extends 'user_profile/base.html.twig' %}
-
+{% extends 'base.html.twig' %}
 
 {% block title %}Créer une annonce{% endblock %}
 
 {% block body %}
 
-    {# Affichage des messages flash #}
+    {# Messages flash #}
     {% for label, messages in app.flashes %}
         {% for message in messages %}
             <div class="my-4 px-4 py-3 rounded
-                {% if label == 'success' %}
-                    bg-green-100 border border-green-300 text-green-800
-                {% elseif label == 'error' %}
-                    bg-red-100 border border-red-300 text-red-800
+                {% if label == 'success' %} bg-green-100 border border-green-300 text-green-800
+                {% elseif label == 'error' %} bg-red-100 border border-red-300 text-red-800
                 {% endif %}">
                 {{ message }}
             </div>
@@ -76,7 +73,27 @@
                 'class': 'block w-full text-sm text-gray-700 border border-gray-300 rounded-lg bg-white p-2'
             }}) }}
             {{ form_errors(form.photos) }}
+            <p class="text-xs text-gray-500">Après enregistrement, vous pourrez choisir la photo principale.</p>
         </div>
+
+        {# --------- (Optionnel) Photos déjà associées si on renvoie annonce ici --------- #}
+        {% if annonce is defined and annonce.photos|length > 0 %}
+            <div class="mt-6">
+                <h2 class="text-sm font-semibold text-gray-700 mb-2">Choisir la photo principale</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {% for photo in annonce.photos %}
+                        <label class="block border rounded-lg overflow-hidden cursor-pointer">
+                            <img src="{{ asset('uploads/photos/' ~ photo.filename) }}" alt="photo" class="h-32 w-full object-cover">
+                            <div class="p-2 flex items-center gap-2">
+                                <input type="radio" name="mainPhoto" value="{{ photo.id }}" {% if photo.isMain %}checked{% endif %}>
+                                <span class="text-xs text-gray-700">Photo principale</span>
+                                <a href="#">supprimer la photo</a>
+                            </div>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
 
         <button type="submit"
                 class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-center">

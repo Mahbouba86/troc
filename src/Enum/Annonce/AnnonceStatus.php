@@ -1,6 +1,7 @@
 <?php
 
-namespace Enum\Annonce\Status;
+namespace App\Enum\Annonce;
+
 enum AnnonceStatus: string
 {
     case PENDING = 'Pending';

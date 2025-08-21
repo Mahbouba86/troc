@@ -10,7 +10,7 @@ use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
-use Enum\Annonce\Status\AnnonceStatus;
+use Enum\Annonce\AnnonceStatus;
 
 class AnnonceFixtures extends Fixture implements DependentFixtureInterface
 {

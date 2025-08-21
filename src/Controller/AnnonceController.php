@@ -7,7 +7,6 @@ use App\Entity\Category;
 use App\Entity\Photo;
 use App\Form\AnnonceType;
 use App\Form\SearchAnnonceType;
-use App\Repository\AnnonceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,10 +15,14 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use App\Enum\Annonce\AnnonceStatus;
 
-// Si tu utilises l'ENUM pour le statut, garde cet use.
-// S'il n'existe pas dans ton projet, tu peux supprimer cette ligne.
-use Enum\Annonce\Status\AnnonceStatus;
+// UX Map (Leaflet)
+use Symfony\UX\Map\Map;
+use Symfony\UX\Map\Marker;
+use Symfony\UX\Map\Point;
+use Symfony\UX\Map\InfoWindow;
+use Symfony\UX\Map\Icon\Icon;
 
 class AnnonceController extends AbstractController
 {
@@ -31,6 +34,7 @@ class AnnonceController extends AbstractController
 
         $qb = $em->getRepository(Annonce::class)->createQueryBuilder('a');
 
+        // Filtre rapide par catégorie via query ?category=ID
         $categoryId = $request->query->get('category');
         if ($categoryId) {
             $qb->andWhere('a.category = :cat')->setParameter('cat', $categoryId);
@@ -63,32 +67,26 @@ class AnnonceController extends AbstractController
     #[Route('/annonce/{id}', name: 'annonce_show', requirements: ['id' => '\d+'])]
     public function show(Annonce $annonce): Response
     {
-        // Détecte s'il existe déjà une réservation active (PENDING/RESERVED) pour l'utilisateur courant
         $hasMyActiveReservation = false;
         $user = $this->getUser();
 
         if ($user) {
-            // Valeurs à considérer comme "actives"
+            // Valeurs "actives" de l'Annonce
             $activeValues = ['PENDING', 'RESERVED'];
-
-            // Si tu as un enum AnnonceStatus avec ->value, on préfère ses valeurs
             if (class_exists(AnnonceStatus::class)) {
                 try {
                     $activeValues = [
-                        \is_object(AnnonceStatus::PENDING) && method_exists(AnnonceStatus::PENDING, 'value')
-                            ? AnnonceStatus::PENDING->value : 'PENDING',
-                        \is_object(AnnonceStatus::RESERVED) && method_exists(AnnonceStatus::RESERVED, 'value')
-                            ? AnnonceStatus::RESERVED->value : 'RESERVED',
+                        AnnonceStatus::PENDING->value,
+                        AnnonceStatus::RESERVED->value,
                     ];
-                } catch (\Throwable $e) {
-                    // En cas d’erreur, on garde le fallback ['PENDING','RESERVED']
+                } catch (\Throwable) {
+                    // on garde le fallback
                 }
             }
 
             foreach ($annonce->getReservations() as $r) {
                 if ($r->getUser() === $user) {
                     $statut = $r->getStatut();
-                    // Normalise le statut en string
                     $statusValue = (\is_object($statut) && method_exists($statut, 'value')) ? $statut->value : $statut;
                     if (\in_array($statusValue, $activeValues, true)) {
                         $hasMyActiveReservation = true;
@@ -98,17 +96,37 @@ class AnnonceController extends AbstractController
             }
         }
 
+        // ---------------------
+        // Carte UX Map (Leaflet)
+        // ---------------------
+        $map = new Map();
+
+        // TODO: Remplacer par lat/lng de l’annonce quand tu les auras en BDD
+        $icon = Icon::url('/uploads/icones/pin.png')->width(32)->height(32);
+
+        $map->addMarker(new Marker(
+            position: new Point(48.8566, 2.3522),
+            title: $annonce->getTitre(),
+            infoWindow: new InfoWindow(
+                headerContent: '<b>'.htmlspecialchars($annonce->getTitre(), ENT_QUOTES).'</b>',
+                content: 'Ville : '.htmlspecialchars((string) $annonce->getVille(), ENT_QUOTES)
+            ),
+            icon: $icon
+        ));
+        $map->fitBoundsToMarkers();
+
         return $this->render('annonce/show.html.twig', [
-            'annonce' => $annonce,
-            'hasMyActiveReservation' => $hasMyActiveReservation, // <- utilisé dans le Twig pour désactiver le bouton
+            'annonce' => $annonce,                         // <-- IMPORTANT : passé au Twig
+            'hasMyActiveReservation' => $hasMyActiveReservation,
+            'map' => $map,
         ]);
     }
 
     #[Route('/mes-annonces', name: 'mes_annonces')]
-    public function mesAnnonces(AnnonceRepository $annonceRepository, Security $security): Response
+    public function mesAnnonces(Security $security, EntityManagerInterface $em): Response
     {
         $user = $security->getUser();
-        $annonces = $annonceRepository->findBy(['user' => $user]);
+        $annonces = $em->getRepository(Annonce::class)->findBy(['user' => $user]);
 
         return $this->render('annonce/mes_annonces.html.twig', [
             'annonces' => $annonces,
@@ -126,19 +144,18 @@ class AnnonceController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $uploadedFiles = $form->get('photos')->getData();
 
+            // 1) Upload de nouvelles photos (optionnel)
+            $uploadedFiles = $form->get('photos')->getData() ?? [];
             foreach ($uploadedFiles as $uploadedFile) {
                 $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
-                $safeFilename = $slugger->slug($originalFilename);
-                $newFilename = $safeFilename . '-' . uniqid() . '.' . $uploadedFile->guessExtension();
+                $safeFilename = (string) $slugger->slug((string) $originalFilename);
+                $ext = $uploadedFile->guessExtension() ?: 'bin';
+                $newFilename = $safeFilename . '-' . uniqid('', true) . '.' . $ext;
 
                 try {
-                    $uploadedFile->move(
-                        $this->getParameter('uploads_directory'),
-                        $newFilename
-                    );
-                } catch (FileException $e) {
+                    $uploadedFile->move($this->getParameter('uploads_directory'), $newFilename);
+                } catch (FileException) {
                     $this->addFlash('error', 'Erreur lors de l\'upload d\'une image.');
                     continue;
                 }
@@ -146,12 +163,23 @@ class AnnonceController extends AbstractController
                 $photo = new Photo();
                 $photo->setFilename($newFilename);
                 $photo->setAnnonce($annonce);
-
                 $em->persist($photo);
+            }
+
+            // 2) Déterminer/mettre à jour la photo principale
+            $mainPhotoId = $request->request->get('mainPhoto');
+            if ($mainPhotoId) {
+                $annonce->setMainPhotoById((int) $mainPhotoId);
+            } elseif (!$annonce->getMainPhoto() && \count($annonce->getPhotos()) > 0) {
+                $first = $annonce->getPhotos()->first();
+                if ($first instanceof Photo) {
+                    $first->setIsMain(true);
+                }
             }
 
             $em->flush();
             $this->addFlash('success', 'Annonce modifiée avec succès.');
+
             return $this->redirectToRoute('mes_annonces');
         }
 
@@ -170,22 +198,23 @@ class AnnonceController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+
             $annonce->setUser($this->getUser());
             $annonce->setCreatedAt(new \DateTimeImmutable());
 
-            $uploadedFiles = $form->get('photos')->getData();
+            // 1) Upload des photos
+            $uploadedFiles = $form->get('photos')->getData() ?? [];
+            $newPhotos = [];
 
             foreach ($uploadedFiles as $uploadedFile) {
                 $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
-                $safeFilename = $slugger->slug($originalFilename);
-                $newFilename = $safeFilename . '-' . uniqid() . '.' . $uploadedFile->guessExtension();
+                $safeFilename = (string) $slugger->slug((string) $originalFilename);
+                $ext = $uploadedFile->guessExtension() ?: 'bin';
+                $newFilename = $safeFilename . '-' . uniqid('', true) . '.' . $ext;
 
                 try {
-                    $uploadedFile->move(
-                        $this->getParameter('uploads_directory'),
-                        $newFilename
-                    );
-                } catch (FileException $e) {
+                    $uploadedFile->move($this->getParameter('uploads_directory'), $newFilename);
+                } catch (FileException) {
                     $this->addFlash('error', 'Erreur lors de l\'upload de l\'image.');
                     continue;
                 }
@@ -193,19 +222,31 @@ class AnnonceController extends AbstractController
                 $photo = new Photo();
                 $photo->setFilename($newFilename);
                 $photo->setAnnonce($annonce);
-
                 $em->persist($photo);
+
+                $newPhotos[] = $photo;
             }
 
             $em->persist($annonce);
+            $em->flush(); // IDs des photos
+
+            // 2) Déterminer la principale à partir de la radio
+            $mainPhotoId = $request->request->get('mainPhoto');
+            if ($mainPhotoId) {
+                $annonce->setMainPhotoById((int) $mainPhotoId);
+            } elseif (\count($newPhotos) > 0) {
+                $newPhotos[0]->setIsMain(true);
+            }
+
             $em->flush();
 
             $this->addFlash('success', 'Annonce créée avec succès.');
-            return $this->redirectToRoute('annonce_new');
+            return $this->redirectToRoute('annonce_edit', ['id' => $annonce->getId()]);
         }
 
         return $this->render('annonce/new.html.twig', [
             'form' => $form->createView(),
+            'annonce' => $annonce,
         ]);
     }
 }
