@@ -7,6 +7,7 @@ use App\Entity\Category;
 use App\Entity\Photo;
 use App\Form\AnnonceType;
 use App\Form\SearchAnnonceType;
+use App\Service\Geocoding\GeoGouvGeocoderService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,14 +19,22 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 use App\Enum\Annonce\AnnonceStatus;
 
 // UX Map (Leaflet)
+use Symfony\UX\Map\Circle;
 use Symfony\UX\Map\Map;
 use Symfony\UX\Map\Marker;
 use Symfony\UX\Map\Point;
 use Symfony\UX\Map\InfoWindow;
 use Symfony\UX\Map\Icon\Icon;
+use Symfony\UX\Map\Rectangle;
 
 class AnnonceController extends AbstractController
 {
+
+    public function __construct(private readonly GeoGouvGeocoderService $geocoderService)
+    {
+
+    }
+
     #[Route('/annonces', name: 'annonce_index')]
     public function index(Request $request, EntityManagerInterface $em): Response
     {
@@ -95,6 +104,10 @@ class AnnonceController extends AbstractController
                 }
             }
         }
+        $geogouv = null;// $this->geocoderService->geocodeCity($annonce->getVille());
+        if (null === $geogouv) {
+            $geogouv = ['lat' => 48.866667, 'lon' => 2.333333];
+        }
 
         // ---------------------
         // Carte UX Map (Leaflet)
@@ -102,10 +115,12 @@ class AnnonceController extends AbstractController
         $map = new Map();
 
         // TODO: Remplacer par lat/lng de l’annonce quand tu les auras en BDD
-        $icon = Icon::url('/uploads/icones/pin.png')->width(32)->height(32);
+        $icon = Icon::url('p/uploads/icones/pin.png')->width(32)->height(32);
+
+        $point = new Point($geogouv['lat'], $geogouv['lon']);
 
         $map->addMarker(new Marker(
-            position: new Point(48.8566, 2.3522),
+            position: $point,
             title: $annonce->getTitre(),
             infoWindow: new InfoWindow(
                 headerContent: '<b>'.htmlspecialchars($annonce->getTitre(), ENT_QUOTES).'</b>',
@@ -113,6 +128,7 @@ class AnnonceController extends AbstractController
             ),
             icon: $icon
         ));
+
         $map->fitBoundsToMarkers();
 
         return $this->render('annonce/show.html.twig', [
@@ -149,7 +165,7 @@ class AnnonceController extends AbstractController
             $uploadedFiles = $form->get('photos')->getData() ?? [];
             foreach ($uploadedFiles as $uploadedFile) {
                 $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
-                $safeFilename = (string) $slugger->slug((string) $originalFilename);
+                $safeFilename = (string)$slugger->slug((string)$originalFilename);
                 $ext = $uploadedFile->guessExtension() ?: 'bin';
                 $newFilename = $safeFilename . '-' . uniqid('', true) . '.' . $ext;
 
@@ -169,7 +185,7 @@ class AnnonceController extends AbstractController
             // 2) Déterminer/mettre à jour la photo principale
             $mainPhotoId = $request->request->get('mainPhoto');
             if ($mainPhotoId) {
-                $annonce->setMainPhotoById((int) $mainPhotoId);
+                $annonce->setMainPhotoById((int)$mainPhotoId);
             } elseif (!$annonce->getMainPhoto() && \count($annonce->getPhotos()) > 0) {
                 $first = $annonce->getPhotos()->first();
                 if ($first instanceof Photo) {
@@ -208,7 +224,7 @@ class AnnonceController extends AbstractController
 
             foreach ($uploadedFiles as $uploadedFile) {
                 $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
-                $safeFilename = (string) $slugger->slug((string) $originalFilename);
+                $safeFilename = (string)$slugger->slug((string)$originalFilename);
                 $ext = $uploadedFile->guessExtension() ?: 'bin';
                 $newFilename = $safeFilename . '-' . uniqid('', true) . '.' . $ext;
 
@@ -233,7 +249,7 @@ class AnnonceController extends AbstractController
             // 2) Déterminer la principale à partir de la radio
             $mainPhotoId = $request->request->get('mainPhoto');
             if ($mainPhotoId) {
-                $annonce->setMainPhotoById((int) $mainPhotoId);
+                $annonce->setMainPhotoById((int)$mainPhotoId);
             } elseif (\count($newPhotos) > 0) {
                 $newPhotos[0]->setIsMain(true);
             }

@@ -63,7 +63,9 @@ Encore
   .enablePostCssLoader()
   // enables Sass/SCSS support
   .enableSassLoader()
-
+  .addAliases({
+    'leaflet/dist/leaflet.min.css': 'leaflet/dist/leaflet.css',
+  })
 // uncomment if you use TypeScript
 //.enableTypeScriptLoader()
 

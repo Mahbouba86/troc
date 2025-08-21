@@ -3,12 +3,12 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Enum\Annonce\AnnonceStatus;
 use App\Form\UserProfileType;
 use App\Repository\AnnonceRepository;
 use App\Repository\MessageRepository;
 use App\Repository\ReservationRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Enum\Annonce\AnnonceStatus;
 use Enum\Reservation\ReservationStatus; // ✅ pour filtrer Pending/Accepted
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
