@@ -5,31 +5,33 @@
 {% block body %}
     <div class="max-w-4xl mx-auto mt-10 px-4">
         <div class="text-center mb-10">
-            <h1 class="text-3xl font-bold text-gray-900">Bonjour {{ user.username }}</h1>
-            <p class="text-gray-500">{{ user.email }}</p>
+            <h1 class="text-3xl font-bold text-gray-900">
+                Bonjour {{ app.user ? app.user.username : 'invité' }}
+            </h1>
+            {% if app.user %}
+                <p class="text-gray-500">{{ app.user.email }}</p>
+            {% endif %}
         </div>
 
         {# Bloc 1 : Statistiques dynamiques #}
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div class="bg-white rounded-lg shadow p-6 text-center">
-                <p class="text-lg text-gray-600">Troc réalisés</p>
-                <p class="text-3xl font-bold text-green-600">{{ trocRealisesCount }}</p>
+                <p class="text-lg text-gray-600">Don réalisés</p>
+                <p class="text-3xl font-bold text-green-600">{{ trocRealisesCount|default(0) }}</p>
             </div>
             <div class="bg-white rounded-lg shadow p-6 text-center">
-                <p class="text-lg text-gray-600">Troc en cours</p>
-                <p class="text-3xl font-bold text-yellow-500">{{ trocEnCoursCount }}</p>
+                <p class="text-lg text-gray-600">Don en cours</p>
+                <p class="text-3xl font-bold text-yellow-500">{{ trocEnCoursCount|default(0) }}</p>
             </div>
             <div class="bg-white rounded-lg shadow p-6 text-center">
                 <p class="text-lg text-gray-600">Messages reçus</p>
-                <p class="text-3xl font-bold text-blue-600">{{ messagesRecus }}</p>
+                <p class="text-3xl font-bold text-blue-600">{{ messagesRecus|default(0) }}</p>
             </div>
         </div>
 
         {# Bloc A : Demandes de réservation en attente (reçues en tant que PROPRIÉTAIRE) #}
         <div class="bg-white rounded-lg shadow p-6 mb-10">
-            <h2 class="text-xl font-semibold mb-4">
-                Demandes de réservation en attente
-            </h2>
+            <h2 class="text-xl font-semibold mb-4">Demandes de réservation reçues</h2>
 
             {% if reservationsEnAttente is defined and reservationsEnAttente|length > 0 %}
                 <ul class="divide-y">
@@ -56,45 +58,41 @@
                             </div>
 
                             <div class="flex items-center gap-2 shrink-0">
-                                {# Discuter au sujet de cette annonce #}
                                 <a href="{{ path('app_message_index', { id: reservation.annonce.id }) }}"
                                    class="px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm"
                                    aria-label="Discuter au sujet de {{ reservation.annonce.titre }}">
                                     Discuter
                                 </a>
 
-                                {# Boutons avec popup de confirmation #}
-                                <button
-                                    type="button"
-                                    class="px-3 py-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm"
-                                    onclick="confirmModeration(
-                                        'accept-{{ reservation.id }}',
-                                        'Accepter la demande',
-                                        'Confirmer l’acceptation de la demande de {{ reservation.user.username|e('js') }} ?',
-                                        'Accepter',
-                                        'success'
-                                        )"
-                                    aria-label="Accepter la demande de {{ reservation.user.username }}">
+                                <button type="button"
+                                        class="px-3 py-1.5 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm"
+                                        onclick="confirmModeration(
+                                            'accept-{{ reservation.id }}',
+                                            'Accepter la demande',
+                                            'Confirmer l’acceptation de la demande de {{ reservation.user.username|e('js') }} ?',
+                                            'Accepter',
+                                            'success'
+                                            )"
+                                        aria-label="Accepter la demande de {{ reservation.user.username }}">
                                     Accepter
                                 </button>
 
-                                <button
-                                    type="button"
-                                    class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm"
-                                    onclick="confirmModeration(
-                                        'decline-{{ reservation.id }}',
-                                        'Refuser la demande',
-                                        'Refuser la demande de {{ reservation.user.username|e('js') }} ?',
-                                        'Refuser',
-                                        'warning'
-                                        )"
-                                    aria-label="Refuser la demande de {{ reservation.user.username }}">
+                                <button type="button"
+                                        class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm"
+                                        onclick="confirmModeration(
+                                            'decline-{{ reservation.id }}',
+                                            'Refuser la demande',
+                                            'Refuser la demande de {{ reservation.user.username|e('js') }} ?',
+                                            'Refuser',
+                                            'warning'
+                                            )"
+                                        aria-label="Refuser la demande de {{ reservation.user.username }}">
                                     Refuser
                                 </button>
                             </div>
                         </li>
 
-                        {# --- Formulaires DÉTACHÉS (un par action) --- #}
+                        {# Formulaires d’action #}
                         <form id="accept-{{ reservation.id }}" method="post"
                               action="{{ path('reservation_accept', { id: reservation.id }) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('reservation_accept_' ~ reservation.id) }}">
@@ -106,7 +104,6 @@
                             <input type="hidden" name="_token" value="{{ csrf_token('reservation_decline_' ~ reservation.id) }}">
                             <input type="submit" hidden>
                         </form>
-                        {# --- /Formulaires détachés --- #}
                     {% endfor %}
                 </ul>
             {% else %}
@@ -116,9 +113,7 @@
 
         {# Bloc B : MES demandes de réservation (envoyées en tant que DEMANDEUR) #}
         <div class="bg-white rounded-lg shadow p-6 mb-10">
-            <h2 class="text-xl font-semibold mb-4">
-                Mes demandes de réservation
-            </h2>
+            <h2 class="text-xl font-semibold mb-4">Demandes de réservation envoyées</h2>
 
             {% if mesReservations is defined and mesReservations|length > 0 %}
                 <ul class="divide-y">
@@ -127,27 +122,16 @@
                         <li class="py-3 flex items-center justify-between gap-4">
                             <div class="min-w-0">
                                 <div class="flex items-center gap-2">
-                                    {# Badge status #}
                                     {% if s == 'Pending' %}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                                            En attente
-                                        </span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">En attente</span>
                                     {% elseif s == 'Accepted' %}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                            Acceptée
-                                        </span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Acceptée</span>
                                     {% elseif s == 'Refused' %}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                                            Refusée
-                                        </span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Refusée</span>
                                     {% elseif s == 'Cancelled' %}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                            Annulée
-                                        </span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Annulée</span>
                                     {% else %}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                            {{ s }}
-                                        </span>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{{ s }}</span>
                                     {% endif %}
 
                                     <a href="{{ path('annonce_show', { id: r.annonce.id }) }}"
@@ -191,7 +175,7 @@
         </div>
     </div>
 
-    {# ---------- SweetAlert2 + helpers (confirm + toasts) ---------- #}
+    {# ---------- SweetAlert2 + helpers ---------- #}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function confirmModeration(formId, title, text, confirmText, mode) {
@@ -214,15 +198,6 @@
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    Swal.fire({
-                        title: 'Traitement en cours…',
-                        didOpen: () => { Swal.showLoading(); },
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        showConfirmButton: false,
-                        backdrop: true,
-                        customClass: { popup: 'rounded-xl p-6' }
-                    });
                     const form = document.getElementById(formId);
                     if (form) form.submit();
                 }
@@ -251,19 +226,9 @@
     </script>
 
     {# Toaster pour les addFlash du contrôleur #}
-    {% for msg in app.flashes('success') %}
-        <script>showFlash('success', '{{ msg|e('js') }}');</script>
-    {% endfor %}
-    {% for msg in app.flashes('info') %}
-        <script>showFlash('info', '{{ msg|e('js') }}');</script>
-    {% endfor %}
-    {% for msg in app.flashes('warning') %}
-        <script>showFlash('warning', '{{ msg|e('js') }}');</script>
-    {% endfor %}
-    {% for msg in app.flashes('danger') %}
-        <script>showFlash('danger', '{{ msg|e('js') }}');</script>
-    {% endfor %}
-    {% for msg in app.flashes('error') %}
-        <script>showFlash('error', '{{ msg|e('js') }}');</script>
-    {% endfor %}
+    {% for msg in app.flashes('success') %}<script>showFlash('success', '{{ msg|e('js') }}');</script>{% endfor %}
+    {% for msg in app.flashes('info') %}<script>showFlash('info', '{{ msg|e('js') }}');</script>{% endfor %}
+    {% for msg in app.flashes('warning') %}<script>showFlash('warning', '{{ msg|e('js') }}');</script>{% endfor %}
+    {% for msg in app.flashes('danger') %}<script>showFlash('danger', '{{ msg|e('js') }}');</script>{% endfor %}
+    {% for msg in app.flashes('error') %}<script>showFlash('error', '{{ msg|e('js') }}');</script>{% endfor %}
 {% endblock %}

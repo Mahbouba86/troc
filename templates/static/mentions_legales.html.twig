@@ -1,0 +1,25 @@
+{% extends 'user_profile/base.html.twig' %}
+
+{% block title %}Mentions légales{% endblock %}
+
+{% block body %}
+    <div class="max-w-4xl mx-auto px-4 py-10">
+        <h1 class="text-3xl font-bold mb-6">Mentions légales</h1>
+
+        <section class="space-y-4 text-gray-700">
+            <p><strong>Éditeur du site :</strong> DonAgora – (Renseigner la dénomination sociale, adresse, email, téléphone, SIRET le cas échéant).</p>
+            <p><strong>Directeur de la publication :</strong> (Nom Prénom).</p>
+            <p><strong>Hébergement :</strong> (Hébergeur, adresse, contact).</p>
+            <p><strong>Contact :</strong> <a href="mailto:contact@donagora.example" class="text-blue-600 underline">contact@donagora.example</a></p>
+
+            <h2 class="text-xl font-semibold mt-6">Propriété intellectuelle</h2>
+            <p>Les contenus de ce site (textes, images, logos) sont protégés. Toute reproduction nécessite notre autorisation.</p>
+
+            <h2 class="text-xl font-semibold mt-6">Protection des données</h2>
+            <p>Les données personnelles sont traitées conformément au RGPD. Vous disposez d’un droit d’accès, de rectification, d’opposition et d’effacement : contactez-nous.</p>
+
+            <h2 class="text-xl font-semibold mt-6">Cookies</h2>
+            <p>Le site peut utiliser des cookies fonctionnels et de mesure d’audience. Vous pouvez les gérer via les paramètres de votre navigateur.</p>
+        </section>
+    </div>
+{% endblock %}

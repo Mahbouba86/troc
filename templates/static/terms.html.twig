@@ -1,0 +1,46 @@
+{% extends 'user_profile/base.html.twig' %}
+
+{% block title %}Conditions d’utilisation{% endblock %}
+
+{% block body %}
+    <div class="max-w-4xl mx-auto px-4 py-10">
+        <h1 class="text-3xl font-bold mb-6">Conditions d’utilisation</h1>
+
+        <div class="space-y-6 text-gray-700">
+            <section>
+                <h2 class="text-xl font-semibold">1. Acceptation</h2>
+                <p>En utilisant DonAgora, vous acceptez les présentes conditions. Si vous n’êtes pas d’accord, merci de ne pas utiliser le service.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold">2. Comptes</h2>
+                <p>Vous êtes responsable des informations fournies et de la confidentialité de votre mot de passe. Prévenez-nous en cas d’usage non autorisé.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold">3. Contenus</h2>
+                <p>Vous garantissez disposer des droits sur les contenus publiés et vous interdisez tout contenu illicite, injurieux, diffamatoire, ou portant atteinte aux droits de tiers.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold">4. Fonctionnement du service</h2>
+                <p>Nous nous efforçons d’assurer la disponibilité du service sans garantie d’absence d’erreurs ni d’interruptions.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold">5. Données personnelles</h2>
+                <p>Vos données sont traitées conformément au RGPD. Consultez les Mentions légales pour plus d’informations et vos droits.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold">6. Modification des conditions</h2>
+                <p>Nous pouvons adapter ces conditions. La version en vigueur est publiée sur cette page.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-semibold">7. Contact</h2>
+                <p>Pour toute question : <a class="text-blue-600 underline" href="{{ path('app_contact') }}">nous contacter</a>.</p>
+            </section>
+        </div>
+    </div>
+{% endblock %}

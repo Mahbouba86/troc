@@ -29,29 +29,36 @@ class AnnonceType extends AbstractType
                 'mapped' => false,
                 'multiple' => true,
                 'required' => false,
-            ])
-            ->add('status', EnumType::class, [
+            ]);
+
+        // ✅ Champ "status" uniquement si is_edit = true
+        if ($options['is_edit']) {
+            $builder->add('status', EnumType::class, [
                 'class' => AnnonceStatus::class,
                 'required' => true,
                 'label' => 'Statut',
+                'choices' => [ // ✅ on limite aux 3 valeurs
+                    AnnonceStatus::AVAILABLE,
+                    AnnonceStatus::RESERVED,
+                    AnnonceStatus::FINISHED,
+                ],
                 'choice_label' => function (AnnonceStatus $status) {
                     return match ($status) {
                         AnnonceStatus::AVAILABLE => 'Disponible',
                         AnnonceStatus::RESERVED  => 'Réservée',
                         AnnonceStatus::FINISHED  => 'Terminée',
-                        AnnonceStatus::PENDING   => 'En attente',
-                        AnnonceStatus::PUBLISHED => 'Publiée',
-                        AnnonceStatus::CANCELLED => 'Brouillon',
+                        default => null, // les autres ne s'affichent pas
                     };
                 },
-            ])
-        ;
+            ]);
+        }
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'data_class' => Annonce::class,
+            'is_edit' => false, // valeur par défaut
         ]);
     }
 }

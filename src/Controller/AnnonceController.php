@@ -11,6 +11,7 @@ use App\Repository\AnnonceRepository;
 use App\Service\Geocoding\GeoGouvGeocoderService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -20,13 +21,11 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 use App\Enum\Annonce\AnnonceStatus;
 
 // UX Map (Leaflet)
-use Symfony\UX\Map\Circle;
 use Symfony\UX\Map\Map;
 use Symfony\UX\Map\Marker;
 use Symfony\UX\Map\Point;
 use Symfony\UX\Map\InfoWindow;
 use Symfony\UX\Map\Icon\Icon;
-use Symfony\UX\Map\Rectangle;
 
 class AnnonceController extends AbstractController
 {
@@ -42,7 +41,6 @@ class AnnonceController extends AbstractController
 
         $qb = $em->getRepository(Annonce::class)->createQueryBuilder('a');
 
-        // Filtre rapide par catégorie via query ?category=ID
         $categoryId = $request->query->get('category');
         if ($categoryId) {
             $qb->andWhere('a.category = :cat')->setParameter('cat', $categoryId);
@@ -72,10 +70,6 @@ class AnnonceController extends AbstractController
         ]);
     }
 
-    /**
-     * Recherche AJAX (retourne un fragment HTML)
-     * GET /annonces/search?q=velo&category=1&ville=Paris
-     */
     #[Route('/annonces/search', name: 'annonce_search', methods: ['GET'])]
     public function search(Request $request, AnnonceRepository $repo): Response
     {
@@ -97,7 +91,6 @@ class AnnonceController extends AbstractController
         $user = $this->getUser();
 
         if ($user) {
-            // Valeurs "actives" de l'Annonce
             $activeValues = ['PENDING', 'RESERVED'];
             if (class_exists(AnnonceStatus::class)) {
                 try {
@@ -106,7 +99,6 @@ class AnnonceController extends AbstractController
                         AnnonceStatus::RESERVED->value,
                     ];
                 } catch (\Throwable) {
-                    // fallback
                 }
             }
 
@@ -122,19 +114,13 @@ class AnnonceController extends AbstractController
             }
         }
 
-        $geogouv = null; // $this->geocoderService->geocodeCity($annonce->getVille());
+        $geogouv = null;
         if (null === $geogouv) {
             $geogouv = ['lat' => 48.866667, 'lon' => 2.333333];
         }
 
-        // ---------------------
-        // Carte UX Map (Leaflet)
-        // ---------------------
         $map = new Map();
-
-        // TODO: Remplacer par lat/lng de l’annonce quand disponibles en BDD
         $icon = Icon::url('p/uploads/icones/pin.png')->width(32)->height(32);
-
         $point = new Point($geogouv['lat'], $geogouv['lon']);
 
         $map->addMarker(new Marker(
@@ -174,12 +160,12 @@ class AnnonceController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
-        $form = $this->createForm(AnnonceType::class, $annonce);
+        $form = $this->createForm(AnnonceType::class, $annonce, [
+            'is_edit' => true
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-
-            // 1) Upload de nouvelles photos (optionnel)
             $uploadedFiles = $form->get('photos')->getData() ?? [];
             foreach ($uploadedFiles as $uploadedFile) {
                 $originalFilename = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
@@ -200,7 +186,6 @@ class AnnonceController extends AbstractController
                 $em->persist($photo);
             }
 
-            // 2) Déterminer/mettre à jour la photo principale
             $mainPhotoId = $request->request->get('mainPhoto');
             if ($mainPhotoId) {
                 $annonce->setMainPhotoById((int)$mainPhotoId);
@@ -223,6 +208,36 @@ class AnnonceController extends AbstractController
         ]);
     }
 
+    #[Route('/annonce/photo/{photo}/delete', name: 'annonce_photo_delete', methods: ['POST'])]
+    public function deletePhoto(Photo $photo, Request $request, EntityManagerInterface $em): Response
+    {
+        $annonce = $photo->getAnnonce();
+
+        if ($annonce->getUser() !== $this->getUser() && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if ($this->isCsrfTokenValid('delete_photo_' . $photo->getId(), $request->request->get('_token'))) {
+            // Supprime le fichier du disque
+            $fs = new Filesystem();
+            $uploadDir = $this->getParameter('uploads_directory');
+            $path = $uploadDir . '/' . $photo->getFilename();
+            if ($fs->exists($path)) {
+                try { $fs->remove($path); } catch (\Throwable) {}
+            }
+
+            // Supprime en BDD
+            $em->remove($photo);
+            $em->flush();
+
+            $this->addFlash('success', 'Photo supprimée avec succès.');
+        } else {
+            $this->addFlash('error', 'Jeton CSRF invalide.');
+        }
+
+        return $this->redirectToRoute('annonce_edit', ['id' => $annonce->getId()]);
+    }
+
     #[Route('/annonce/new', name: 'annonce_new')]
     public function new(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
@@ -232,11 +247,9 @@ class AnnonceController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-
             $annonce->setUser($this->getUser());
             $annonce->setCreatedAt(new \DateTimeImmutable());
 
-            // 1) Upload des photos
             $uploadedFiles = $form->get('photos')->getData() ?? [];
             $newPhotos = [];
 
@@ -262,9 +275,8 @@ class AnnonceController extends AbstractController
             }
 
             $em->persist($annonce);
-            $em->flush(); // IDs des photos
+            $em->flush();
 
-            // 2) Déterminer la principale à partir de la radio
             $mainPhotoId = $request->request->get('mainPhoto');
             if ($mainPhotoId) {
                 $annonce->setMainPhotoById((int)$mainPhotoId);
@@ -282,5 +294,40 @@ class AnnonceController extends AbstractController
             'form' => $form->createView(),
             'annonce' => $annonce,
         ]);
+    }
+
+    /**
+     * Suppression TOTALE d'une annonce (CSRF + vérification propriétaire/admin)
+     */
+    #[Route('/annonce/{id}/delete', name: 'annonce_delete', methods: ['POST'])]
+    public function delete(Request $request, Annonce $annonce, EntityManagerInterface $em): Response
+    {
+        if ($annonce->getUser() !== $this->getUser() && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if (!$this->isCsrfTokenValid('delete_annonce_' . $annonce->getId(), $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton CSRF invalide.');
+            return $this->redirectToRoute('annonce_show', ['id' => $annonce->getId()]);
+        }
+
+        // Supprimer les fichiers photos du disque
+        $fs = new Filesystem();
+        $uploadDir = $this->getParameter('uploads_directory');
+        foreach ($annonce->getPhotos() as $photo) {
+            $path = $uploadDir . '/' . $photo->getFilename();
+            if ($fs->exists($path)) {
+                try { $fs->remove($path); } catch (\Throwable) {}
+            }
+            // Supprime explicitement l'entité Photo au cas où orphanRemoval n'est pas configuré
+            $em->remove($photo);
+        }
+
+        // Supprime l'annonce
+        $em->remove($annonce);
+        $em->flush();
+
+        $this->addFlash('success', 'Annonce supprimée avec succès.');
+        return $this->redirectToRoute('mes_annonces'); // ou 'annonce_index'
     }
 }

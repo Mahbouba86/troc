@@ -7,7 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use App\Enum\Annonce\AnnonceStatus; // <-- CORRIGÉ : App\Enum\Annonce\AnnonceStatus
+use App\Enum\Annonce\AnnonceStatus;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Ignore;
 
@@ -28,9 +28,9 @@ class Annonce
     #[ORM\Column(type: Types::TEXT)]
     private ?string $description = null;
 
-    // Mapping ENUM natif Doctrine
+    // Enum natif Doctrine (AnnonceStatus)
     #[ORM\Column(type: Types::STRING, length: 20, enumType: AnnonceStatus::class)]
-    private AnnonceStatus $status; // <-- non-nullable côté PHP (aligne-toi avec nullable=false)
+    private AnnonceStatus $status;
 
     #[ORM\ManyToOne(inversedBy: 'annonces')]
     #[ORM\JoinColumn(nullable: false)]
@@ -38,7 +38,12 @@ class Annonce
     private ?User $user = null;
 
     /** @var Collection<int, Reservation> */
-    #[ORM\OneToMany(targetEntity: Reservation::class, mappedBy: 'annonce')]
+    #[ORM\OneToMany(
+        targetEntity: Reservation::class,
+        mappedBy: 'annonce',
+        cascade: ['remove'],
+        orphanRemoval: true
+    )]
     private Collection $reservations;
 
     #[ORM\ManyToOne(inversedBy: 'annonces')]
@@ -65,14 +70,16 @@ class Annonce
 
     public function __construct()
     {
-        $this->messages = new ArrayCollection();
+        $this->messages     = new ArrayCollection();
         $this->reservations = new ArrayCollection();
-        $this->photos = new ArrayCollection();
+        $this->photos       = new ArrayCollection();
 
         // Valeurs par défaut
-        $this->status = AnnonceStatus::PENDING; // <-- ok si tu gardes cet état dans l'enum
+        $this->status    = AnnonceStatus::PENDING;
         $this->createdAt = new \DateTimeImmutable();
     }
+
+    // ---------- Getters & Setters ----------
 
     public function getId(): ?int { return $this->id; }
 
@@ -94,6 +101,7 @@ class Annonce
     public function getCategory(): ?Category { return $this->category; }
     public function setCategory(?Category $category): static { $this->category = $category; return $this; }
 
+    // ---------- Messages ----------
     /** @return Collection<int, Message> */
     public function getMessages(): Collection { return $this->messages; }
     public function addMessage(Message $message): static
@@ -112,12 +120,13 @@ class Annonce
         return $this;
     }
 
+    // ---------- Ville ----------
     public function getVille(): ?string { return $this->ville; }
     public function setVille(string $ville): static { $this->ville = $ville; return $this; }
 
+    // ---------- Photos ----------
     /** @return Collection<int, Photo> */
     public function getPhotos(): Collection { return $this->photos; }
-
     public function addPhoto(Photo $photo): static
     {
         if (!$this->photos->contains($photo)) {
@@ -126,7 +135,6 @@ class Annonce
         }
         return $this;
     }
-
     public function removePhoto(Photo $photo): static
     {
         if ($this->photos->removeElement($photo) && $photo->getAnnonce() === $this) {
@@ -135,6 +143,7 @@ class Annonce
         return $this;
     }
 
+    // ---------- Reservations ----------
     /** @return Collection<int, Reservation> */
     public function getReservations(): Collection { return $this->reservations; }
     public function addReservation(Reservation $reservation): static

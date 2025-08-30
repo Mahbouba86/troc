@@ -9,7 +9,7 @@ use App\Repository\AnnonceRepository;
 use App\Repository\MessageRepository;
 use App\Repository\ReservationRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Enum\Reservation\ReservationStatus; // ✅ pour filtrer Pending/Accepted
+use Enum\Reservation\ReservationStatus;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

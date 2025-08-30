@@ -1,0 +1,50 @@
+{# templates/partials/_header.html.twig #}
+{% set current_route = current_route|default(app.request.attributes.get('_route')) %}
+
+{% set linkBase      = 'px-3 py-2 rounded-md transition border-b-2' %}
+{% set activeClasses = 'text-blue-700 font-semibold border-blue-600 bg-blue-50' %}
+{% set idleClasses   = 'text-gray-700 hover:text-blue-800 border-transparent' %}
+
+<header class="bg-white shadow p-4">
+    <div class="flex justify-between items-center max-w-7xl mx-auto">
+        <a href="{{ path('app_home') }}" class="text-xl font-bold text-gray-800">DonAgora</a>
+
+        <nav class="flex gap-4 items-center">
+            <a href="{{ path('annonce_new') }}"
+               class="{{ linkBase }} {{ current_route in ['annonce_new','annonce_edit'] ? activeClasses : idleClasses }}"
+               {% if current_route in ['annonce_new','annonce_edit'] %}aria-current="page"{% endif %}>
+                Je propose
+            </a>
+
+            <a href="{{ path('annonce_index') }}"
+               class="{{ linkBase }} {{ current_route in ['annonce_index','annonce_show'] ? activeClasses : idleClasses }}"
+               {% if current_route in ['annonce_index','annonce_show'] %}aria-current="page"{% endif %}>
+                Je recherche
+            </a>
+
+            <a href="{{ path('app_contact') }}"
+               class="{{ linkBase }} {{ current_route == 'app_contact' ? activeClasses : idleClasses }}"
+               {% if current_route == 'app_contact' %}aria-current="page"{% endif %}>
+                Contactez-nous
+            </a>
+
+            {% if app.user %}
+                <span class="text-sm text-gray-600 ml-2">Bonjour, {{ app.user.username }}</span>
+                <a href="{{ path('app_profile') }}"
+                   class="{{ linkBase }} {{ current_route == 'app_profile' ? activeClasses : idleClasses }}">
+                    Mon profil
+                </a>
+                <a href="{{ path('app_logout') }}" class="px-2 py-1 text-red-700 hover:text-red-800">Déconnexion</a>
+            {% else %}
+                <a href="{{ path('app_login') }}"
+                   class="{{ linkBase }} {{ current_route == 'app_login' ? activeClasses : idleClasses }}">
+                    Connexion
+                </a>
+                <a href="{{ path('app_register') }}"
+                   class="{{ linkBase }} {{ current_route == 'app_register' ? activeClasses : idleClasses }}">
+                    Inscription
+                </a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
