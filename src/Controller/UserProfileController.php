@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Entity\Notification;
 use App\Enum\Annonce\AnnonceStatus;
 use App\Form\UserProfileType;
 use App\Repository\AnnonceRepository;
@@ -53,7 +54,8 @@ class UserProfileController extends AbstractController
     public function myProfile(
         MessageRepository $messageRepository,
         AnnonceRepository $annonceRepository,
-        ReservationRepository $reservationRepository
+        ReservationRepository $reservationRepository,
+        EntityManagerInterface $em
     ): Response {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
@@ -71,10 +73,10 @@ class UserProfileController extends AbstractController
         $trocEnCoursCount  = $annonceRepository->countByStatus($me, AnnonceStatus::RESERVED->value);
         $trocRealisesCount = $annonceRepository->countByStatus($me, AnnonceStatus::FINISHED->value);
 
-        // ✅ Demandes de réservation EN ATTENTE reçues (sur MES annonces)
+        // Demandes de réservation EN ATTENTE reçues (sur MES annonces)
         $reservationsEnAttente = $reservationRepository->findPendingForOwner($me);
 
-        // ✅ MES demandes envoyées (actives = Pending/Accepted)
+        // MES demandes envoyées (actives = Pending/Accepted)
         $activeValues = [ReservationStatus::PENDING->value, ReservationStatus::ACCEPTED->value];
         $mesReservations = $reservationRepository->createQueryBuilder('r')
             ->innerJoin('r.annonce', 'a')->addSelect('a')
@@ -86,14 +88,33 @@ class UserProfileController extends AbstractController
             ->getQuery()
             ->getResult();
 
+        // Finalisations à confirmer par MOI (réceptionneur)
+        // - a.finishRequestedAt IS NOT NULL
+        // - je suis a.reservedBy OU j'ai une réservation sur a (r.user = moi)
+        $finalisationsAConfirmer = $annonceRepository->createQueryBuilder('a')
+            ->leftJoin('a.reservations', 'r')
+            ->andWhere('a.finishRequestedAt IS NOT NULL')
+            ->andWhere('(a.reservedBy = :me OR r.user = :me)')
+            ->setParameter('me', $me)
+            ->distinct() // évite les doublons sans GROUP BY
+            ->orderBy('a.finishRequestedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        // Notifications de l'utilisateur (les 20 dernières)
+        $notifications = $em->getRepository(Notification::class)
+            ->findBy(['user' => $me], ['createdAt' => 'DESC'], 20);
+
         return $this->render('user_profile/index.html.twig', [
-            'user'                  => $me,
-            'annonces'              => $annonces,
-            'messagesRecus'         => $messagesRecus,
-            'trocEnCoursCount'      => $trocEnCoursCount,
-            'trocRealisesCount'     => $trocRealisesCount,
-            'reservationsEnAttente' => $reservationsEnAttente, // demandes reçues (proprio)
-            'mesReservations'       => $mesReservations,        // ✅ demandes envoyées (demandeur)
+            'user'                      => $me,
+            'annonces'                  => $annonces,
+            'messagesRecus'             => $messagesRecus,
+            'trocEnCoursCount'          => $trocEnCoursCount,
+            'trocRealisesCount'         => $trocRealisesCount,
+            'reservationsEnAttente'     => $reservationsEnAttente,
+            'mesReservations'           => $mesReservations,
+            'finalisationsAConfirmer'   => $finalisationsAConfirmer,
+            'notifications'             => $notifications,
         ]);
     }
 
@@ -117,7 +138,7 @@ class UserProfileController extends AbstractController
         }
 
         return $this->render('user_profile/edit.html.twig', [
-            'form' => $form,
+            'form' => $form->createView(),
         ]);
     }
 }

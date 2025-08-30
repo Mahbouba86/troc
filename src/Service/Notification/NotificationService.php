@@ -11,9 +11,9 @@ class NotificationService
     public function __construct(private EntityManagerInterface $em) {}
 
     /**
-     * Crée et persiste une notification avec titre + message.
+     * Méthode attendue par le contrôleur.
      */
-    public function notify(User $user, string $title, string $message): void
+    public function send(User $user, string $title, string $message, ?string $link = null): void
     {
         $notification = new Notification();
         $notification->setUser($user);
@@ -22,7 +22,20 @@ class NotificationService
         $notification->setCreatedAt(new \DateTimeImmutable());
         $notification->setIsRead(false);
 
+        // Si ton entité possède un champ "link" (nullable)
+        if ($link !== null && method_exists($notification, 'setLink')) {
+            $notification->setLink($link);
+        }
+
         $this->em->persist($notification);
         $this->em->flush();
+    }
+
+    /**
+     * Ta méthode existante (garde-la si tu l’utilises ailleurs).
+     */
+    public function notify(User $user, string $title, string $message): void
+    {
+        $this->send($user, $title, $message, null);
     }
 }

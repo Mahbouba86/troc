@@ -12,24 +12,26 @@
                 <div class="bg-gray-200 shrink-0" style="width:60px; height:60px;">
                     {% set photo = (annonce.photos|length > 0) ? annonce.photos|first : null %}
                     {% if photo %}
-                        <img src="{{ asset('uploads/photos/' ~ photo.filename) }}"
-                             alt=""
-                             class="w-full h-full object-cover">
+                        <img src="{{ asset('uploads/photos/' ~ photo.filename) }}" alt="" class="w-full h-full object-cover">
                     {% endif %}
                 </div>
 
                 <div class="flex-1 min-w-0">
                     <div class="font-semibold truncate text-lg">{{ annonce.titre }}</div>
-                    {% set s = annonce.status.value is defined ? annonce.status.value : annonce.status %}
+
+                    {# Statut (enum ou string) #}
+                    {% set s_raw = attribute(annonce.status, 'value') ?? attribute(annonce.status, 'name') ?? '' %}
+                    {% set s = s_raw|upper %}
                     <div class="mt-0.5">
                         <span class="inline-block px-2 py-0.5 border text-xs
                             {{ s == 'AVAILABLE' ? 'border-green-500 text-green-700' : '' }}
                             {{ s == 'RESERVED' ? 'border-yellow-500 text-yellow-700' : '' }}
                             {{ s == 'PENDING_CONFIRMATION' ? 'border-blue-500 text-blue-700' : '' }}
                             {{ s == 'FINISHED' ? 'border-gray-400 text-gray-600' : '' }}">
-                            {{ s }}
+                            {{ s_raw }}
                         </span>
                     </div>
+
                     {% if other %}
                         <div class="text-xs text-gray-500 mt-0.5">
                             Avec
@@ -40,6 +42,13 @@
                     {% endif %}
                 </div>
             </div>
+
+            {# Bandeau si une demande de finalisation est en cours #}
+            {% if annonce.finishRequestedAt %}
+                <div class="mt-2 text-xs px-2 py-1 rounded bg-blue-50 text-blue-800 border border-blue-200 inline-block">
+                    Demande de finalisation envoyée le {{ annonce.finishRequestedAt|date('d/m/Y H:i') }} — en attente de confirmation.
+                </div>
+            {% endif %}
         </div>
 
         {# Fil de discussion #}
@@ -60,8 +69,29 @@
             {% endfor %}
         </div>
 
-        {# Champ d’envoi #}
-        <div id="reply" class="sticky bottom-0 bg-white border-t border-gray-200 mt-4 p-3">
+        {# --- Calculs utilitaires pour les actions --- #}
+        {% set isOwner = app.user and annonce.user and app.user.id == annonce.user.id %}
+
+        {# Réceptionneur : reservedBy prioritaire, sinon une réservation avec statut RESERVED #}
+        {% set receiverUser = annonce.reservedBy ?? null %}
+        {% if not receiverUser %}
+            {% for r in annonce.reservations %}
+                {# rv_raw = value|name de l’enum, sinon null #}
+                {% set rv_raw = attribute(r.statut, 'value') ?? attribute(r.statut, 'name') %}
+                {% if rv_raw is not null %}
+                    {% set rv = rv_raw|upper %}
+                    {% if rv == 'RESERVED' and receiverUser is null %}
+                        {% set receiverUser = r.user %}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {% set isReceiver = app.user and receiverUser and app.user.id == receiverUser.id %}
+
+        {# Zone d’envoi + actions #}
+        <div id="reply" class="sticky bottom-0 bg-white border-t border-gray-200 mt-4 p-3 space-y-3">
+
+            {# Formulaire message (quand il y a un interlocuteur) #}
             {% if other %}
                 {{ form_start(form, {'attr': {'class': 'flex items-center gap-2'}}) }}
                 {{ form_widget(form.content, {
@@ -76,14 +106,76 @@
             {% else %}
                 <input type="text" disabled class="flex-1 border border-gray-200 px-3 py-2 text-sm opacity-60" placeholder="Choisissez un interlocuteur pour écrire…">
             {% endif %}
-            {% if app.user and app.user.id == annonce.user.id and s == 'RESERVED' %}
-                <a href="{{ path('app_message_close_pick', { id: annonce.id }) }}"
-                   class="px-3 py-2 bg-blue-600 text-white text-sm">
-                    Clôturer / Remettre l’objet
-                </a>
+
+            {# --- Actions de finalisation depuis la discussion --- #}
+
+            {# PROPRIÉTAIRE : si l’annonce est en statut RESERVED #}
+            {% if isOwner and s == 'RESERVED' %}
+                {% if annonce.finishRequestedAt is null %}
+                    <form method="post"
+                          action="{{ path('discussion_request_finish', { id: annonce.id }) }}"
+                          class="inline-flex">
+                        <input type="hidden" name="_token" value="{{ csrf_token('request_finish_' ~ annonce.id) }}">
+                        {# <<< AJOUT : on passe l'interlocuteur actif #}
+                        {% if other %}
+                            <input type="hidden" name="receiverId" value="{{ other.id }}">
+                        {% endif %}
+                        <button class="px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                            Finaliser le don
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="text-sm text-gray-600">
+                        Demande envoyée — en attente de confirmation du réceptionneur…
+                    </div>
+                {% endif %}
             {% endif %}
 
 
+            {# RÉCEPTIONNEUR : si une demande est en cours #}
+            {% if isReceiver and annonce.finishRequestedAt %}
+                <form id="confirm-finish-form"
+                      method="post"
+                      action="{{ path('discussion_confirm_finish', { id: annonce.id }) }}"
+                      class="hidden">
+                    <input type="hidden" name="_token" value="{{ csrf_token('confirm_finished_' ~ annonce.id ~ '_' ~ app.user.id) }}">
+                </form>
+
+                <button id="confirm-finish-trigger"
+                        class="px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+                    Confirmer la réception
+                </button>
+
+                <script>
+                    document.getElementById('confirm-finish-trigger')?.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        Swal.fire({
+                            title: 'Confirmer la réception ?',
+                            text: 'Cette action finalisera le don.',
+                            icon: 'question',
+                            showCancelButton: true,
+                            confirmButtonText: 'Oui, confirmer',
+                            cancelButtonText: 'Annuler',
+                            customClass: { popup: 'rounded-lg' }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                document.getElementById('confirm-finish-form')?.submit();
+                            }
+                        });
+                    });
+                </script>
+            {% endif %}
+
+            {# DEBUG (désactive-le après test)
+            <pre class="text-xs text-gray-500">
+              s={{ s }} (raw={{ s_raw }})
+              owner={{ isOwner ? 'yes' : 'no' }}
+              receiverUser={{ receiverUser ? receiverUser.id : 'null' }}
+              isReceiver={{ isReceiver ? 'yes' : 'no' }}
+              finishRequestedAt={{ annonce.finishRequestedAt ? annonce.finishRequestedAt|date('c') : 'null' }}
+              me={{ app.user ? app.user.id : 'anon' }} | ownerId={{ annonce.user ? annonce.user.id : 'null' }}
+            </pre>
+            #}
         </div>
     </div>
 {% endblock %}

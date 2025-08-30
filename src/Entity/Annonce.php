@@ -90,6 +90,13 @@ class Annonce
     #[ORM\OrderBy(['isMain' => 'DESC', 'id' => 'ASC'])]
     private Collection $photos;
 
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $finishRequestedAt = null;
+
+    public function getFinishRequestedAt(): ?\DateTimeImmutable { return $this->finishRequestedAt; }
+    public function setFinishRequestedAt(?\DateTimeImmutable $dt): self { $this->finishRequestedAt = $dt; return $this; }
+
+
     public function __construct()
     {
         $this->messages     = new ArrayCollection();

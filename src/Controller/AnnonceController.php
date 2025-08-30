@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Annonce;
+use App\Entity\User;
 use App\Entity\Category;
 use App\Entity\Photo;
 use App\Form\AnnonceType;
@@ -11,12 +12,12 @@ use App\Repository\AnnonceRepository;
 use App\Service\Geocoding\GeoGouvGeocoderService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
 use App\Enum\Annonce\AnnonceStatus;
 
@@ -26,6 +27,10 @@ use Symfony\UX\Map\Marker;
 use Symfony\UX\Map\Point;
 use Symfony\UX\Map\InfoWindow;
 use Symfony\UX\Map\Icon\Icon;
+
+// Notifications & outils
+use App\Service\Notification\NotificationService;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 class AnnonceController extends AbstractController
 {
@@ -91,22 +96,12 @@ class AnnonceController extends AbstractController
         $user = $this->getUser();
 
         if ($user) {
-            $activeValues = ['PENDING', 'RESERVED'];
-            if (class_exists(AnnonceStatus::class)) {
-                try {
-                    $activeValues = [
-                        AnnonceStatus::PENDING->value,
-                        AnnonceStatus::RESERVED->value,
-                    ];
-                } catch (\Throwable) {
-                }
-            }
+            $activeReservationCodes = ['PENDING', 'RESERVED'];
 
             foreach ($annonce->getReservations() as $r) {
                 if ($r->getUser() === $user) {
-                    $statut = $r->getStatut();
-                    $statusValue = (\is_object($statut) && method_exists($statut, 'value')) ? $statut->value : $statut;
-                    if (\in_array($statusValue, $activeValues, true)) {
+                    $code = $this->enumCode($r->getStatut());
+                    if (\in_array($code, $activeReservationCodes, true)) {
                         $hasMyActiveReservation = true;
                         break;
                     }
@@ -114,10 +109,7 @@ class AnnonceController extends AbstractController
             }
         }
 
-        $geogouv = null;
-        if (null === $geogouv) {
-            $geogouv = ['lat' => 48.866667, 'lon' => 2.333333];
-        }
+        $geogouv = ['lat' => 48.866667, 'lon' => 2.333333];
 
         $map = new Map();
         $icon = Icon::url('p/uploads/icones/pin.png')->width(32)->height(32);
@@ -218,7 +210,6 @@ class AnnonceController extends AbstractController
         }
 
         if ($this->isCsrfTokenValid('delete_photo_' . $photo->getId(), $request->request->get('_token'))) {
-            // Supprime le fichier du disque
             $fs = new Filesystem();
             $uploadDir = $this->getParameter('uploads_directory');
             $path = $uploadDir . '/' . $photo->getFilename();
@@ -226,7 +217,6 @@ class AnnonceController extends AbstractController
                 try { $fs->remove($path); } catch (\Throwable) {}
             }
 
-            // Supprime en BDD
             $em->remove($photo);
             $em->flush();
 
@@ -311,7 +301,6 @@ class AnnonceController extends AbstractController
             return $this->redirectToRoute('annonce_show', ['id' => $annonce->getId()]);
         }
 
-        // Supprimer les fichiers photos du disque
         $fs = new Filesystem();
         $uploadDir = $this->getParameter('uploads_directory');
         foreach ($annonce->getPhotos() as $photo) {
@@ -322,11 +311,155 @@ class AnnonceController extends AbstractController
             $em->remove($photo);
         }
 
-        // Supprime l'annonce
         $em->remove($annonce);
         $em->flush();
 
         $this->addFlash('success', 'Annonce supprimée avec succès.');
         return $this->redirectToRoute('mes_annonces');
+    }
+
+    /* ===========================
+       Finalisation depuis discussion
+       =========================== */
+
+    /**
+     * Le propriétaire déclenche la demande de finalisation.
+     */
+    #[Route('/discussion/{id}/request-finish', name: 'discussion_request_finish', methods: ['POST'])]
+    public function requestFinish(
+        Request $request,
+        Annonce $annonce,
+        EntityManagerInterface $em,
+        NotificationService $notifier
+    ): Response {
+        if ($annonce->getUser() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if (!$this->isCsrfTokenValid('request_finish_'.$annonce->getId(), $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton CSRF invalide.');
+            return $this->redirectToRoute('annonce_show', ['id' => $annonce->getId()]);
+        }
+
+        // 1) bénéficiaire explicite
+        $receiver = $annonce->getReservedBy();
+
+        // 2) sinon, réservation au statut RESERVED (si tu l’utilises)
+        if (!$receiver) {
+            foreach ($annonce->getReservations() as $r) {
+                $st = $r->getStatut();
+                $code = $st instanceof \BackedEnum ? $st->value : ($st instanceof \UnitEnum ? $st->name : (string)$st);
+                if (strtoupper($code) === 'RESERVED') {
+                    $receiver = $r->getUser();
+                    break;
+                }
+            }
+        }
+
+        // 3) repli : interlocuteur actif passé en hidden (receiverId)
+        if (!$receiver) {
+            $receiverId = (int) $request->request->get('receiverId', 0);
+            if ($receiverId > 0) {
+                $candidate = $em->getRepository(User::class)->find($receiverId);
+                if ($candidate && $candidate !== $this->getUser()) {
+                    $receiver = $candidate;
+                }
+            }
+        }
+
+        if (!$receiver) {
+            $this->addFlash('warning', 'Aucun réceptionneur trouvé pour cette annonce.');
+            return $this->redirectToRoute('annonce_show', ['id' => $annonce->getId()]);
+        }
+
+        if (method_exists($annonce, 'setFinishRequestedAt')) {
+            $annonce->setFinishRequestedAt(new \DateTimeImmutable());
+        }
+        $em->flush();
+
+        $url = $this->generateUrl('annonce_show', ['id' => $annonce->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $notifier->send(
+            $receiver,
+            'Confirmez la réception',
+            sprintf('Le propriétaire indique que « %s » est remis. Ouvrez la discussion pour confirmer.', (string) $annonce->getTitre()),
+            $url
+        );
+
+        $this->addFlash('info', 'Demande envoyée. En attente de confirmation du réceptionneur.');
+        return $this->redirectToRoute('annonce_show', ['id' => $annonce->getId()]);
+    }
+
+    /**
+     * Le réceptionneur confirme la réception -> statut FINISHED + notification propriétaire.
+     */
+    #[Route('/discussion/{id}/confirm-finish', name: 'discussion_confirm_finish', methods: ['POST'])]
+    public function confirmFinish(
+        Request $request,
+        Annonce $annonce,
+        EntityManagerInterface $em,
+        NotificationService $notifier
+    ): Response {
+        $user = $this->getUser();
+        if (!$user) {
+            throw $this->createAccessDeniedException();
+        }
+
+        // autorisation : reservedBy = moi, ou j'ai une réservation sur cette annonce
+        $isReceiver = false;
+
+        if ($annonce->getReservedBy() && $annonce->getReservedBy()->getId() === $user->getId()) {
+            $isReceiver = true;
+        } else {
+            foreach ($annonce->getReservations() as $r) {
+                if ($r->getUser() && $r->getUser()->getId() === $user->getId()) {
+                    $isReceiver = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$isReceiver) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if (!$this->isCsrfTokenValid('confirm_finished_'.$annonce->getId().'_'.$user->getId(), $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton CSRF invalide.');
+            return $this->redirectToRoute('annonce_show', ['id' => $annonce->getId()]);
+        }
+
+        if (class_exists(AnnonceStatus::class)) {
+            $annonce->setStatus(AnnonceStatus::FINISHED);
+        } else {
+            $annonce->setStatus('FINISHED');
+        }
+        if (method_exists($annonce, 'setFinishRequestedAt')) {
+            $annonce->setFinishRequestedAt(null);
+        }
+
+        $em->flush();
+
+        $notifier->send(
+            $annonce->getUser(),
+            'Réception confirmée',
+            sprintf('%s a confirmé la réception de « %s ».', $user->getUserIdentifier(), (string) $annonce->getTitre()),
+            $this->generateUrl('annonce_show', ['id' => $annonce->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
+        );
+
+        $this->addFlash('success', 'Réception confirmée. Merci !');
+        return $this->redirectToRoute('annonce_show', ['id' => $annonce->getId()]);
+    }
+
+    /**
+     * Retourne le "code" d'un statut (enum -> value|name, string sinon), en UPPER.
+     */
+    private function enumCode(mixed $status): string
+    {
+        if ($status instanceof \BackedEnum) {
+            return strtoupper((string) $status->value);
+        }
+        if ($status instanceof \UnitEnum) {
+            return strtoupper($status->name);
+        }
+        return strtoupper((string) $status);
     }
 }
