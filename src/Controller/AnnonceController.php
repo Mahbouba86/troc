@@ -153,7 +153,7 @@ class AnnonceController extends AbstractController
         ]);
     }
 
-    #[Route('/annonce/{id}/edit', name: 'annonce_edit')]
+    #[Route('/annonce/{id}/edit', name: 'annonce_edit', methods: ['GET','POST'])]
     public function edit(Request $request, Annonce $annonce, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
         if ($annonce->getUser() !== $this->getUser()) {
@@ -176,7 +176,7 @@ class AnnonceController extends AbstractController
                 try {
                     $uploadedFile->move($this->getParameter('uploads_directory'), $newFilename);
                 } catch (FileException) {
-                    $this->addFlash('error', 'Erreur lors de l\'upload d\'une image.');
+                    $this->addFlash('error', 'Upload de l’image impossible.');
                     continue;
                 }
 
@@ -262,7 +262,7 @@ class AnnonceController extends AbstractController
                 try {
                     $uploadedFile->move($this->getParameter('uploads_directory'), $newFilename);
                 } catch (FileException) {
-                    $this->addFlash('error', 'Erreur lors de l\'upload de l\'image.');
+                    $this->addFlash('error', 'Upload de l’image impossible.');
                     continue;
                 }
 
@@ -319,7 +319,6 @@ class AnnonceController extends AbstractController
             if ($fs->exists($path)) {
                 try { $fs->remove($path); } catch (\Throwable) {}
             }
-            // Supprime explicitement l'entité Photo au cas où orphanRemoval n'est pas configuré
             $em->remove($photo);
         }
 
@@ -328,6 +327,6 @@ class AnnonceController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Annonce supprimée avec succès.');
-        return $this->redirectToRoute('mes_annonces'); // ou 'annonce_index'
+        return $this->redirectToRoute('mes_annonces');
     }
 }

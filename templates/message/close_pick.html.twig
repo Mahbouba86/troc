@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+{% block title %}Clôturer – {{ annonce.titre }}{% endblock %}
+{% block body %}
+    <div class="max-w-xl mx-auto mt-10 px-4">
+        <h1 class="text-2xl font-bold mb-6">Clôturer le don</h1>
+
+        {% if choices is empty %}
+            <p class="text-gray-600">Aucun interlocuteur trouvé pour cette annonce.</p>
+            <a href="{{ path('app_message_index', { id: annonce.id }) }}" class="inline-block mt-4 px-4 py-2 bg-gray-100">Retour</a>
+        {% else %}
+            <form method="post" action="{{ path('app_message_close_submit', { id: annonce.id }) }}" class="space-y-4">
+                <input type="hidden" name="_token" value="{{ csrf_close }}">
+                <label class="block text-sm font-medium text-gray-700">Choisissez le bénéficiaire :</label>
+                <select name="recipient_id" class="w-full border px-3 py-2">
+                    {% for u in choices %}
+                        <option value="{{ u.id }}">{{ u.username }} — {{ u.email }}</option>
+                    {% endfor %}
+                </select>
+
+                <button class="px-4 py-2 bg-blue-600 text-white">Envoyer la demande de confirmation</button>
+                <a href="{{ path('app_message_index', { id: annonce.id }) }}" class="px-4 py-2 border">Annuler</a>
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -11,10 +11,12 @@ use App\Repository\AnnonceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Enum\Annonce\AnnonceStatus;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 
 #[Route('/message')]
 class MessageController extends AbstractController
@@ -280,6 +282,128 @@ class MessageController extends AbstractController
         return $this->redirectToRoute('app_message_index', [
             'id'     => $annonce->getId(),
             'withId' => $other->getId(),
+        ]);
+    }
+
+    /**
+     * Étape 1 : choisir le bénéficiaire pour la clôture (propriétaire)
+     */
+    #[Route(
+        '/{id}/close',
+        name: 'app_message_close_pick',
+        methods: ['GET'],
+        requirements: ['id' => '\d+']
+    )]
+    public function pickCloseRecipient(
+        Annonce $annonce,
+        MessageRepository $messageRepo,
+        Security $security
+    ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        /** @var User $me */
+        $me = $security->getUser();
+
+        if ($annonce->getUser()->getId() !== $me->getId()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        // L’annonce doit être en RESERVED
+        $status = \is_object($annonce->getStatus()) && property_exists($annonce->getStatus(), 'value')
+            ? $annonce->getStatus()->value
+            : $annonce->getStatus();
+
+        if ($status !== AnnonceStatus::RESERVED->value) {
+            $this->addFlash('warning', 'L’annonce doit être en statut Réservé pour lancer la confirmation de remise.');
+            return $this->redirectToRoute('app_message_index', ['id' => $annonce->getId()]);
+        }
+
+        // liste des utilisateurs ayant discuté (hors propriétaire)
+        $choices = $messageRepo->findConversationUsersByAnnonce($annonce, $me);
+
+        return $this->render('message/close_pick.html.twig', [
+            'annonce'   => $annonce,
+            'choices'   => $choices,
+            'csrf_close'=> $this->container->get('security.csrf.token_manager')->getToken('close_flow')->getValue(),
+        ]);
+    }
+
+    /**
+     * Étape 2 : on fixe reservedBy, passe en PENDING_CONFIRMATION, et notifie
+     */
+    #[Route(
+        '/{id}/close',
+        name: 'app_message_close_submit',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function submitClose(
+        Annonce $annonce,
+        Request $request,
+        EntityManagerInterface $em,
+        Security $security,
+        MailerInterface $mailer
+    ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        /** @var User $me */
+        $me = $security->getUser();
+
+        if ($annonce->getUser()->getId() !== $me->getId()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if (!$this->isCsrfTokenValid('close_flow', $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Token CSRF invalide');
+        }
+
+        $userId = (int) $request->request->get('recipient_id');
+        /** @var User|null $recipient */
+        $recipient = $em->getRepository(User::class)->find($userId);
+        if (!$recipient) {
+            $this->addFlash('danger', 'Bénéficiaire introuvable.');
+            return $this->redirectToRoute('app_message_close_pick', ['id' => $annonce->getId()]);
+        }
+
+        // Met à jour annonce
+        if (method_exists($annonce, 'setReservedBy')) {
+            $annonce->setReservedBy($recipient);
+        }
+        $annonce->setStatus(AnnonceStatus::PENDING_CONFIRMATION);
+        $em->flush();
+
+        // Notif via un Message "système"
+        $sys = new Message();
+        $sys->setSender($me);
+        $sys->setReceiver($recipient);
+        $sys->setAnnonce($annonce);
+        $sys->setContent(sprintf(
+            'Le propriétaire a indiqué vous avoir remis « %s ». Merci de confirmer la réception.',
+            $annonce->getTitre()
+        ));
+        $em->persist($sys);
+        $em->flush();
+
+        // Email (optionnel)
+        try {
+            $email = (new Email())
+                ->to($recipient->getEmail())
+                ->subject('Confirmation de réception — ' . $annonce->getTitre())
+                ->text(
+                    "Le propriétaire a indiqué vous avoir remis l'objet. Confirmez ici : " .
+                    $this->generateUrl(
+                        'app_message_index',
+                        ['id' => $annonce->getId(), 'withId' => $recipient->getId()],
+                        \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL
+                    ) . '#reply'
+                );
+            $mailer->send($email);
+        } catch (\Throwable $e) {
+            // silencieux si l'email échoue
+        }
+
+        $this->addFlash('success', 'Demande de confirmation envoyée au bénéficiaire.');
+        return $this->redirectToRoute('app_message_index', [
+            'id'     => $annonce->getId(),
+            'withId' => $recipient->getId(),
         ]);
     }
 }

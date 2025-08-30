@@ -11,6 +11,37 @@ use Doctrine\Persistence\ManagerRegistry;
 
 class MessageRepository extends ServiceEntityRepository
 {
+
+    public function findConversationUsersByAnnonce(Annonce $annonce, User $exclude): array
+    {
+        $qb = $this->createQueryBuilder('m')
+            ->select('DISTINCT u')
+            ->join('m.annonce', 'a')
+            ->leftJoin('m.sender', 's')
+            ->leftJoin('m.receiver', 'r')
+            ->addSelect('s', 'r')
+            ->where('a = :a')
+            ->setParameter('a', $annonce);
+
+        // on reconstruit "u" comme l’autre côté (sender/receiver) ≈ renvoyer deux sets puis merger
+        $senders = $this->createQueryBuilder('m1')
+            ->select('DISTINCT s1')
+            ->join('m1.annonce', 'a1')
+            ->join('m1.sender', 's1')
+            ->where('a1 = :a')->setParameter('a', $annonce)
+            ->getQuery()->getResult();
+
+        $receivers = $this->createQueryBuilder('m2')
+            ->select('DISTINCT r1')
+            ->join('m2.annonce', 'a2')
+            ->join('m2.receiver', 'r1')
+            ->where('a2 = :a')->setParameter('a', $annonce)
+            ->getQuery()->getResult();
+
+        $all = array_unique(array_merge($senders, $receivers), SORT_REGULAR);
+        // filtre l'utilisateur à exclure (propriétaire)
+        return array_values(array_filter($all, fn($u) => $u->getId() !== $exclude->getId()));
+    }
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Message::class);

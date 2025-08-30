@@ -2,14 +2,21 @@
 
 namespace App\Entity;
 
+use App\Enum\Annonce\AnnonceStatus;
 use App\Repository\AnnonceRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use App\Enum\Annonce\AnnonceStatus;
-use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Ignore;
+use Symfony\Component\Validator\Constraints as Assert;
+
+// Relations (assure-toi d'avoir bien ces classes)
+use App\Entity\User;
+use App\Entity\Category;
+use App\Entity\Message;
+use App\Entity\Reservation;
+use App\Entity\Photo;
 
 #[ORM\Entity(repositoryClass: AnnonceRepository::class)]
 class Annonce
@@ -28,7 +35,10 @@ class Annonce
     #[ORM\Column(type: Types::TEXT)]
     private ?string $description = null;
 
-    // Enum natif Doctrine (AnnonceStatus)
+    /**
+     * ⚠️ length=20 : OK pour "PENDING_CONFIRMATION" (20 caractères pile).
+     * Si tu ajoutes un statut plus long, pense à augmenter length.
+     */
     #[ORM\Column(type: Types::STRING, length: 20, enumType: AnnonceStatus::class)]
     private AnnonceStatus $status;
 
@@ -52,8 +62,20 @@ class Annonce
     private ?Category $category = null;
 
     /** @var Collection<int, Message> */
-    #[ORM\OneToMany(targetEntity: Message::class, mappedBy: 'annonce', orphanRemoval: true)]
+    #[ORM\OneToMany(
+        targetEntity: Message::class,
+        mappedBy: 'annonce',
+        orphanRemoval: true
+    )]
     private Collection $messages;
+
+    /**
+     * Bénéficiaire retenu pendant la phase de remise/confirmation.
+     * Null par défaut, SET NULL si l’utilisateur est supprimé.
+     */
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $reservedBy = null;
 
     #[ORM\Column(length: 255)]
     private ?string $ville = null;
@@ -74,8 +96,7 @@ class Annonce
         $this->reservations = new ArrayCollection();
         $this->photos       = new ArrayCollection();
 
-        // Valeurs par défaut
-        $this->status    = AnnonceStatus::PENDING;
+        $this->status    = AnnonceStatus::PENDING; // valeur par défaut
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -119,6 +140,10 @@ class Annonce
         }
         return $this;
     }
+
+    // ---------- reservedBy ----------
+    public function getReservedBy(): ?User { return $this->reservedBy; }
+    public function setReservedBy(?User $user): self { $this->reservedBy = $user; return $this; }
 
     // ---------- Ville ----------
     public function getVille(): ?string { return $this->ville; }

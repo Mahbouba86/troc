@@ -76,6 +76,14 @@
             {% else %}
                 <input type="text" disabled class="flex-1 border border-gray-200 px-3 py-2 text-sm opacity-60" placeholder="Choisissez un interlocuteur pour écrire…">
             {% endif %}
+            {% if app.user and app.user.id == annonce.user.id and s == 'RESERVED' %}
+                <a href="{{ path('app_message_close_pick', { id: annonce.id }) }}"
+                   class="px-3 py-2 bg-blue-600 text-white text-sm">
+                    Clôturer / Remettre l’objet
+                </a>
+            {% endif %}
+
+
         </div>
     </div>
 {% endblock %}

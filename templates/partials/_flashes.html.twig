@@ -2,10 +2,23 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     function showFlash(label, message) {
-        const icon =
-            (label === 'danger' || label === 'error' || label === 'reset_password_error') ? 'error' :
-                (label === 'warning') ? 'warning' :
-                    (label === 'info') ? 'info' : 'success';
+        let icon;
+
+        switch (label) {
+            case 'danger':
+            case 'error':
+            case 'reset_password_error':
+                icon = 'error';
+                break;
+            case 'warning':
+                icon = 'warning';
+                break;
+            case 'info':
+                icon = 'info';
+                break;
+            default:
+                icon = 'success';
+        }
 
         Swal.fire({
             toast: true,
@@ -15,7 +28,6 @@
             showConfirmButton: false,
             timer: 4000,
             timerProgressBar: true,
-            buttonsStyling: false,
             customClass: {
                 popup: 'rounded-lg shadow-lg',
                 title: 'text-sm font-medium text-gray-800'
@@ -24,9 +36,11 @@
     }
 </script>
 
-{# Déclenche les toasts pour TOUS les types de flash #}
+{# Déclenche un toast pour chaque flash #}
 {% for label, messages in app.flashes %}
     {% for message in messages %}
-        <script>showFlash('{{ label|e('js') }}','{{ message|e('js') }}');</script>
+        <script>
+            showFlash('{{ label|e('js') }}', '{{ message|e('js') }}');
+        </script>
     {% endfor %}
 {% endfor %}

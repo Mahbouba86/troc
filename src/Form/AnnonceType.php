@@ -31,23 +31,22 @@ class AnnonceType extends AbstractType
                 'required' => false,
             ]);
 
-        // ✅ Champ "status" uniquement si is_edit = true
+        // Champ "status" seulement en édition
         if ($options['is_edit']) {
             $builder->add('status', EnumType::class, [
                 'class' => AnnonceStatus::class,
                 'required' => true,
                 'label' => 'Statut',
-                'choices' => [ // ✅ on limite aux 3 valeurs
+                'choices' => [
                     AnnonceStatus::AVAILABLE,
                     AnnonceStatus::RESERVED,
                     AnnonceStatus::FINISHED,
                 ],
-                'choice_label' => function (AnnonceStatus $status) {
+                'choice_label' => static function (AnnonceStatus $status) {
                     return match ($status) {
                         AnnonceStatus::AVAILABLE => 'Disponible',
                         AnnonceStatus::RESERVED  => 'Réservée',
                         AnnonceStatus::FINISHED  => 'Terminée',
-                        default => null, // les autres ne s'affichent pas
                     };
                 },
             ]);
@@ -57,8 +56,11 @@ class AnnonceType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => Annonce::class,
-            'is_edit' => false, // valeur par défaut
+            'data_class'      => Annonce::class,
+            'is_edit'         => false,
+            'csrf_protection' => true,
+            'csrf_field_name' => '_token',
+            'csrf_token_id'   => 'annonce_form',
         ]);
     }
 }
