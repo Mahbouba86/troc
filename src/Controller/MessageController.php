@@ -20,11 +20,61 @@ use Symfony\Bundle\SecurityBundle\Security;
 class MessageController extends AbstractController
 {
     /**
-     * Page discussion (header annonce + boutons + flux messages + champ envoi)
-     * - On garde le nom de route existant: app_message_index
-     * - Paramètre optionnel withId: l’autre participant (utile si le proprio parle avec un intéressé précis)
+     * Inbox (liste des conversations)
      */
-    #[Route('/{id}/{withId?}', name: 'app_message_index', methods: ['GET'])]
+    #[Route('/messages', name: 'app_message_inbox', methods: ['GET'])]
+    public function inbox(
+        MessageRepository $repo,
+        AnnonceRepository $annonceRepo,
+        EntityManagerInterface $em,
+        Security $security
+    ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        /** @var User $me */
+        $me = $security->getUser();
+
+        $qb = $em->createQueryBuilder()
+            ->select('m, a, s, r')
+            ->from(Message::class, 'm')
+            ->join('m.annonce', 'a')
+            ->join('m.sender', 's')
+            ->join('m.receiver', 'r')
+            ->where('s = :me OR r = :me')
+            ->setParameter('me', $me)
+            ->orderBy('m.createdAt', 'DESC');
+
+        $all = $qb->getQuery()->getResult();
+
+        // Regroupement (annonce, other) -> dernier message
+        $threads = [];
+        foreach ($all as $m) {
+            $other = $m->getSender()->getId() === $me->getId() ? $m->getReceiver() : $m->getSender();
+            $key = $m->getAnnonce()->getId() . '#' . $other->getId();
+            if (!isset($threads[$key]) || $m->getCreatedAt() > $threads[$key]['lastAt']) {
+                $threads[$key] = [
+                    'annonce' => $m->getAnnonce(),
+                    'other'   => $other,
+                    'last'    => $m,
+                    'lastAt'  => $m->getCreatedAt(),
+                ];
+            }
+        }
+
+        return $this->render('message/inbox.html.twig', [
+            'threads' => $threads,
+        ]);
+    }
+
+    /**
+     * Page discussion (header annonce + boutons + flux messages + champ envoi)
+     * Paramètre optionnel withId: l’autre participant
+     */
+    #[Route(
+        '/{id}/{withId?}',
+        name: 'app_message_index',
+        methods: ['GET'],
+        requirements: ['id' => '\d+', 'withId' => '\d+']
+    )]
     public function show(
         Annonce $annonce,
         Request $request,
@@ -45,23 +95,21 @@ class MessageController extends AbstractController
             }
         } else {
             // Par défaut : si je ne suis pas le propriétaire, je parle au propriétaire
-            // Si je suis le propriétaire et pas de withId, on affiche sans messages (ou on mettra une liste à gauche plus tard)
             $other = ($me->getId() === $annonce->getUser()->getId()) ? null : $annonce->getUser();
         }
 
-        // Récup historique
+        // Historique
         $messages = [];
         if ($other) {
-            // réutilise ta méthode custom
             $messages = $messageRepo->findByAnnonceAndUsers($annonce, $me, $other);
         }
 
-        // Formulaire d’envoi (si tu veux garder MessageType)
+        // Formulaire d’envoi (action vers app_message_send)
         $message = new Message();
         $form = $this->createForm(MessageType::class, $message, [
             'action' => $this->generateUrl('app_message_send', [
-                'id'    => $annonce->getId(),
-                'toId'  => $other?->getId() ?? 0,
+                'id'   => $annonce->getId(),
+                'toId' => $other?->getId() ?? 0, // pas affiché si $other null
             ]),
             'method' => 'POST',
         ]);
@@ -84,10 +132,13 @@ class MessageController extends AbstractController
 
     /**
      * Envoi d’un message (POST).
-     * - Tu peux continuer à poster avec MessageType (action définie dans show()).
-     * - Si tu veux, tu peux aussi envoyer en "simple POST" via un input name="content".
      */
-    #[Route('/send/{id}/{toId}', name: 'app_message_send', methods: ['POST'])]
+    #[Route(
+        '/send/{id}/{toId}',
+        name: 'app_message_send',
+        methods: ['POST'],
+        requirements: ['id' => '\d+', 'toId' => '\d+']
+    )]
     public function send(
         Annonce $annonce,
         int $toId,
@@ -100,7 +151,7 @@ class MessageController extends AbstractController
         $me = $security->getUser();
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-        // Sécurité: CSRF (si tu envoies via formulaire custom)
+        // CSRF si formulaire custom
         $token = $request->request->get('_token');
         if ($token && !$this->isCsrfTokenValid('send_msg', $token)) {
             throw $this->createAccessDeniedException('Token CSRF invalide');
@@ -112,7 +163,7 @@ class MessageController extends AbstractController
             return $this->redirectToRoute('app_message_index', ['id' => $annonce->getId()]);
         }
 
-        // Si tu gardes MessageType :
+        // Si MessageType utilisé
         $message = new Message();
         $form = $this->createForm(MessageType::class, $message);
         $form->handleRequest($request);
@@ -130,7 +181,7 @@ class MessageController extends AbstractController
             ]);
         }
 
-        // Sinon, fallback simple input name="content"
+        // Fallback simple input name="content"
         $content = trim((string) $request->request->get('content', ''));
         if ($content !== '') {
             $msg = new Message();
@@ -150,12 +201,13 @@ class MessageController extends AbstractController
 
     /**
      * Boutons d’actions sur l’annonce depuis la discussion.
-     * - reserve  : non-proprio → AVAILABLE -> RESERVED
-     * - cancel   : réservant     → RESERVED|PENDING_CONFIRMATION -> AVAILABLE (clear reservedBy)
-     * - give     : proprio       → RESERVED -> PENDING_CONFIRMATION (verrouillé sur reservedBy)
-     * - confirm  : réservant     → PENDING_CONFIRMATION -> FINISHED
      */
-    #[Route('/op/{id}', name: 'app_message_op', methods: ['POST'])]
+    #[Route(
+        '/op/{id}',
+        name: 'app_message_op',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
     public function operate(
         Annonce $annonce,
         Request $request,
@@ -171,8 +223,8 @@ class MessageController extends AbstractController
             throw $this->createAccessDeniedException('Token CSRF invalide');
         }
 
-        $op     = (string) $request->request->get('op');         // reserve|cancel|give|confirm
-        $withId = (int) $request->request->get('withId');        // interlocuteur
+        $op     = (string) $request->request->get('op');   // reserve|cancel|give|confirm
+        $withId = (int) $request->request->get('withId');  // interlocuteur
         $other  = $em->getRepository(User::class)->find($withId);
 
         if (!$other) {
@@ -189,7 +241,6 @@ class MessageController extends AbstractController
             case 'reserve':
                 if ($me->getId() !== $annonce->getUser()->getId() && $status === AnnonceStatus::AVAILABLE->value) {
                     $annonce->setStatus(AnnonceStatus::RESERVED->value);
-                    // nécessite un champ reservedBy ? Si oui :
                     if (method_exists($annonce, 'setReservedBy')) {
                         $annonce->setReservedBy($me);
                     }

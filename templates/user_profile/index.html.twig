@@ -23,10 +23,15 @@
                 <p class="text-lg text-gray-600">Don en cours</p>
                 <p class="text-3xl font-bold text-yellow-500">{{ trocEnCoursCount|default(0) }}</p>
             </div>
-            <div class="bg-white rounded-lg shadow p-6 text-center">
+            <a href="{{ path('app_message_inbox') }}"
+               class="block bg-white rounded-lg shadow p-6 text-center hover:shadow-md hover:-translate-y-0.5 transition cursor-pointer">
                 <p class="text-lg text-gray-600">Messages reçus</p>
-                <p class="text-3xl font-bold text-blue-600">{{ messagesRecus|default(0) }}</p>
-            </div>
+                <p class="text-3xl font-bold text-blue-600 underline decoration-transparent hover:decoration-blue-600">
+                    {{ messagesRecus|default(0) }}
+                </p>
+            </a>
+
+
         </div>
 
         {# Bloc A : Demandes de réservation en attente (reçues en tant que PROPRIÉTAIRE) #}
