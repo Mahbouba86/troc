@@ -3,125 +3,141 @@
 {% block title %}{{ annonce.titre }}{% endblock %}
 
 {% block body %}
-<div class="max-w-7xl mx-auto mt-10 px-4">
+    <div class="max-w-4xl mx-auto mt-10 px-4">
+        <article class="bg-white rounded-xl shadow p-6">
 
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden grid grid-cols-1 md:grid-cols-12 gap-6">
-        {# ----- Image principale ----- #}
-        <div class="relative md:col-span-5 rounded-lg overflow-hidden h-40 sm:h-48 md:h-56 lg:h-64">
-            {% set mainPhoto = null %}
-            {% for photo in annonce.photos %}
-                {% if mainPhoto is null and photo.isMain %}
-                    {% set mainPhoto = photo %}
-                {% endif %}
-            {% endfor %}
-            {% if mainPhoto is null and annonce.photos|length > 0 %}
-                {% set mainPhoto = annonce.photos|first %}
-            {% endif %}
+            <h1 class="text-3xl font-bold text-gray-900 mb-3">{{ annonce.titre }}</h1>
 
-            {% if mainPhoto %}
-                {% set mainPath = asset('uploads/photos/' ~ mainPhoto.filename) %}
-                <a href="{{ mainPath }}" class="block w-full h-full" data-lightbox>
-                    <img src="{{ mainPath }}" alt="Photo principale"
-                         class="absolute inset-0 w-full h-full object-cover cursor-zoom-in">
-                </a>
-            {% else %}
-                <div class="absolute inset-0 bg-gray-200 flex items-center justify-center text-gray-500">
-                    Aucune image
-                </div>
-            {% endif %}
-        </div>
+            {# statut (enum->value ou string) sans is defined #}
+            {% set _status = attribute(annonce, 'status') %}
+            {% set s = attribute(_status, 'value')|default(_status) %}
 
-        {# ----- Détails ----- #}
-        <div class="md:col-span-7 p-6 md:p-8 flex flex-col justify-center bg-white">
-            <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ annonce.titre }}</h1>
-
-            <div class="mb-2">
-                {# Valeur de statut (string si enum, sinon valeur brute) #}
-                {% set s = annonce.status.value is defined ? annonce.status.value : annonce.status %}
-
-                {# Classes Tailwind selon la valeur EN de l'enum #}
-                {% set badge = {
+            {% set badge = {
                 'Available': 'bg-green-100 text-green-800',
                 'Reserved':  'bg-yellow-100 text-yellow-800',
                 'Finished':  'bg-gray-200 text-gray-700',
-                'Pending':   'bg-blue-100 text-blue-800',     # optionnel si utilisé
-                'Published': 'bg-indigo-100 text-indigo-800', # optionnel
-                'Drafted':   'bg-gray-100 text-gray-600'      # optionnel
-                }[s]|default('bg-gray-100 text-gray-600') %}
+                'Pending':   'bg-blue-100 text-blue-800',
+                'Published': 'bg-indigo-100 text-indigo-800',
+                'Drafted':   'bg-gray-100 text-gray-600'
+            }[s]|default('bg-gray-100 text-gray-600') %}
 
-                <span class="inline-block px-3 py-1 rounded-full text-sm font-medium {{ badge }}">
-            {{ {
-              'Available': 'Disponible',
-              'Reserved':  'Réservé',
-              'Finished':  'Troc effectué',
-              'Pending':   'En attente',   # optionnel
-              'Published': 'Publiée',      # optionnel
-              'Drafted':   'Brouillon'     # optionnel
-            }[s] | default(s) }}
-          </span>
-        </div>
+            <span class="inline-block px-3 py-1 rounded-full text-sm font-medium {{ badge }}">
+      {{ {
+          'Available': 'Disponible',
+          'Reserved':  'Réservé',
+          'Finished':  'Troc effectué',
+          'Pending':   'En attente',
+          'Published': 'Publiée',
+          'Drafted':   'Brouillon'
+      }[s] | default(s) }}
+    </span>
 
-        <p class="text-gray-700 mb-4">{{ annonce.description }}</p>
+            <p class="text-gray-700 mt-4">{{ annonce.description }}</p>
 
-        <p class="text-sm text-gray-500 mb-2">
-          Posté le {{ annonce.createdAt|date('d/m/Y à H:i') }}
-        </p>
+            <div class="text-sm text-gray-500 mt-3 space-y-1">
+                <p>Posté le {{ annonce.createdAt|date('d/m/Y à H:i') }}</p>
+                {% if annonce.ville %}
+                    <p>Ville : <strong>{{ annonce.ville }}</strong></p>
+                {% endif %}
+                <p>
+                    Proposé par :
+                    <a href="{{ path('user_profile', { id: annonce.user.id }) }}" class="text-blue-600 hover:underline">
+                        {{ annonce.user.username }}
+                    </a>
+                </p>
+            </div>
 
-        <p class="text-sm text-gray-600 mb-6">
-          Proposé par :
-          <a href="{{ path('user_profile', { id: annonce.user.id }) }}"
-             class="text-blue-600 hover:underline">
-            {{ annonce.user.username }}
-          </a>
-        </p>
+            {% if app.user and app.user != annonce.user %}
+                <div class="flex gap-4 mt-5">
+                    <a href="{{ path('app_message_index', { id: annonce.id }) }}"
+                       class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-6 rounded-lg transition">
+                        Contacter
+                    </a>
+                    {% include 'annonce/_reservation_button.html.twig' with {
+                        annonce: annonce,
+                        hasMyActiveReservation: hasMyActiveReservation
+                    } %}
+                </div>
+            {% endif %}
 
-        {% if app.user and app.user != annonce.user %}
-          <div class="flex gap-4">
-            <a href="{{ path('app_message_index', { id: annonce.id }) }}"
-               class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-6 rounded-lg transition">
-              Contacter
-            </a>
+            {# ================== GALERIE ================== #}
+            <section class="mt-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-3">Galerie</h2>
 
-            {# --- Bouton de réservation (partiel) --- #}
-            {% include 'annonce/_reservation_button.html.twig' with {
-              annonce: annonce,
-              hasMyActiveReservation: hasMyActiveReservation
-            } %}
-          </div>
-        {% endif %}
-      </div>
-    </div>
+                {# Détermine la photo principale via le getter + fallback first #}
+                {% set mainPhoto = annonce.mainPhoto %}
+                {% if mainPhoto is null %}
+                    {% set mainPhoto = annonce.photos|first %}
+                {% endif %}
 
-    {# ----- Localisation (UX Map / OpenStreetMap) ----- #}
-    <div class="mt-10 bg-gray-50 p-6 rounded-lg shadow-md">
-      <h2 class="text-xl font-semibold text-gray-800 mb-4">Localisation</h2>
+                {# Grande image enfermée dans une DIV de hauteur fixe #}
+                <div class="mx-auto max-w-3xl">
+                    <div class="relative bg-gray-50 rounded-lg border overflow-hidden h-64">
+                        {% if mainPhoto %}
+                            {% set mainPath = asset('uploads/photos/' ~ mainPhoto.filename) %}
+                            <a href="{{ mainPath }}" data-lightbox data-main-link class="block h-full">
+                                <img src="{{ mainPath }}"
+                                     alt="Photo principale"
+                                     class="h-full w-full object-contain bg-white"
+                                     data-main-img>
+                            </a>
+                        {% else %}
+                            <div class="h-full flex items-center justify-center text-gray-400">Aucune image</div>
+                        {% endif %}
+                    </div>
+                </div>
 
-      <p class="text-gray-700 mb-4">
-        Ville : <strong>{{ annonce.ville }}</strong>
-      </p>
+                {% if mainPhoto %}
+                    {% set mainId = mainPhoto.id %}
+                {% else %}
+                    {% set mainId = null %}
+                {% endif %}
 
-      <div class="w-full rounded overflow-hidden" style="height: 420px;">
-        {{ ux_map(map, { style: 'height: 100%; width: 100%' }) }}
+                {# Miniatures enfermées dans une DIV de hauteur fixe #}
+                {% if annonce.photos|length > 1 %}
+                    <div class="mt-4 mx-auto max-w-3xl">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {% for photo in annonce.photos %}
+                                {% set src = asset('uploads/photos/' ~ photo.filename) %}
+                                <button type="button"
+                                        class="block w-full h-56 border border-gray-200 hover:border-blue-500 focus:outline-none {% if photo.id == mainId %}ring-2 ring-blue-500{% endif %}"
+                                        data-thumb-src="{{ src }}"
+                                        aria-label="Voir l'image">
+                                    <div class="w-full h-full overflow-hidden">  {# conteneur carré, pas de rounded #}
+                                        <img src="{{ src }}" alt="" class="w-full h-full object-cover">
+                                    </div>
+                                </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+            </section>
+            {# ================== /GALERIE ================== #}
+
+        </article>
+
+        <div class="mt-10 bg-gray-50 p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Localisation</h2>
+            <div class="w-full rounded overflow-hidden" style="height: 420px;">
+                {{ ux_map(map, { style: 'height: 100%; width: 100%' }) }}
             </div>
         </div>
-
     </div>
 
-    {# ---------- Lightbox minimaliste ---------- #}
     <dialog id="lightboxDialog" class="backdrop:bg-black/70 p-0 rounded-lg overflow-hidden">
         <img id="lightboxImg" src="" alt="" class="max-w-[90vw] max-h-[85vh] object-contain">
     </dialog>
 
     <script>
+        // Zoom (lightbox)
         document.addEventListener('click', function (e) {
             const a = e.target.closest('a[data-lightbox]');
             if (!a) return;
             e.preventDefault();
-
             const dlg = document.getElementById('lightboxDialog');
             const img = document.getElementById('lightboxImg');
             img.src = a.getAttribute('href');
-
             if (typeof dlg.showModal === 'function') {
                 dlg.showModal();
                 dlg.addEventListener('click', function onClick(ev) {
@@ -138,45 +154,23 @@
                 window.open(a.getAttribute('href'), '_blank', 'noopener');
             }
         });
-    </script>
 
-    {# ---------- Toasts SweetAlert2 pour les flashs Symfony ---------- #}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        function showFlash(type, message) {
-            const icon = (type === 'danger' || type === 'error') ? 'error'
-                : (type === 'info' ? 'info'
-                    : (type === 'warning' ? 'warning' : 'success'));
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: icon,
-                title: message,
-                showConfirmButton: false,
-                timer: 4000,
-                timerProgressBar: true,
-                buttonsStyling: false,
-                customClass: {
-                    popup: 'rounded-lg shadow-lg',
-                    title: 'text-sm font-medium text-gray-800'
-                }
+        // Switch image via miniatures
+        document.addEventListener('DOMContentLoaded', function () {
+            const mainLink = document.querySelector('[data-main-link]');
+            const mainImg  = document.querySelector('[data-main-img]');
+            if (!mainLink || !mainImg) return;
+            document.querySelectorAll('[data-thumb-src]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const src = btn.dataset.thumbSrc;
+                    mainImg.src = src;
+                    mainLink.href = src;
+                    document.querySelectorAll('[data-thumb-src]').forEach(b => {
+                        b.classList.remove('ring-2','ring-blue-500');
+                    });
+                    btn.classList.add('ring-2','ring-blue-500');
+                });
             });
-        }
+        });
     </script>
-
-    {% for msg in app.flashes('success') %}
-    <script>showFlash('success', '{{ msg|e('js') }}');</script>
-    {% endfor %}
-    {% for msg in app.flashes('info') %}
-        <script>showFlash('info', '{{ msg|e('js') }}');</script>
-    {% endfor %}
-    {% for msg in app.flashes('warning') %}
-        <script>showFlash('warning', '{{ msg|e('js') }}');</script>
-    {% endfor %}
-    {% for msg in app.flashes('danger') %}
-        <script>showFlash('danger', '{{ msg|e('js') }}');</script>
-    {% endfor %}
-    {% for msg in app.flashes('error') %}
-        <script>showFlash('error', '{{ msg|e('js') }}');</script>
-    {% endfor %}
-    {% endblock %}
+{% endblock %}
