@@ -1,26 +1,44 @@
 security:
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
-
+    
     providers:
         app_user_provider:
             entity:
                 class: App\Entity\User
-                property: username
-
+                property: username   # garde "username" si c'est bien ton identifiant
+    
+    # (facultatif mais utile)
+    role_hierarchy:
+        ROLE_ADMIN: [ROLE_USER]
+    
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|photos|js)/
             security: false
-
+        
         main:
             lazy: true
             provider: app_user_provider
+            
+            # ✅ Ton authenticator personnalisé (typo corrigée)
             custom_authenticator: App\Security\LoginFormAuthenticator
+            
+            # ✅ "Se souvenir de moi"
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: 1209600     # 14 jours en secondes
+                path: /
+                name: REMEMBERME
+                remember_me_parameter: _remember_me
+            
             logout:
                 path: app_logout
                 target: app_login
-
+    
     access_control:
+        # Autoriser publiquement ces pages (utile si un jour tu renforces les accès)
+        - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/reset-password, roles: PUBLIC_ACCESS }
         - { path: ^/profil, roles: ROLE_USER }
         - { path: ^/admin, roles: ROLE_ADMIN }

@@ -1,6 +1,5 @@
 {% extends 'base.html.twig' %}
 
-
 {% block title %}Annonces disponibles{% endblock %}
 
 {% block body %}
@@ -8,8 +7,6 @@
         <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Catégories populaires</h2>
 
         <div class="flex flex-wrap justify-center gap-6">
-
-
             {% for category in categories %}
                 <a href="{{ path('annonce_index', { 'category': category.id }) }}"
                    class="flex flex-col items-center min-w-[100px] group hover:opacity-80 transition">
@@ -24,70 +21,67 @@
         </div>
     </div>
 
-
-    <div class="max-w-7xl mx-auto px-4 py-10">
+    {# ---------- Zone Annonces + Recherche instantanée ---------- #}
+    <div class="max-w-7xl mx-auto px-4 py-10"
+         data-controller="annonce-search"
+         data-annonce-search-url-value="{{ path('annonce_search') }}"
+    >
         <div class="text-center mb-10">
             <h1 class="text-3xl font-bold text-gray-900">
                 Nos annonces<br>
-                <span class="text-blue-600">Trouvez le service qui vous convient</span>
+                <span class="text-blue-800">Découvrez ce que la communauté donne</span>
             </h1>
         </div>
 
-        {# 🔎 Formulaire de recherche INSÉRÉ ici #}
+        {# 🔎 Barre de recherche instantanée #}
         <div class="bg-gray-100 p-6 rounded-lg shadow mb-10">
-            {{ form_start(form, {'method': 'GET'}) }}
+            {# Champ libre pour le NOM D’OBJET (ex. “vélo”) #}
             <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1">
-                    {{ form_label(form.ville) }}
-                    {{ form_widget(form.ville, {'attr': {'class': 'w-full px-3 py-2 rounded border'}}) }}
+                    <label class="block text-sm font-medium mb-1">Objet</label>
+                    <input
+                        type="text"
+                        placeholder="Rechercher un objet (ex. vélo)…"
+                        class="w-full px-3 py-2 rounded border"
+                        data-annonce-search-target="q"
+                        data-action="input->annonce-search#debounceFetch"
+                        autocomplete="off"
+                    >
                 </div>
+
+                {# On garde tes champs existants, branchés en instantané #}
+                <div class="flex-1">
+                    {{ form_label(form.ville) }}
+                    {{ form_widget(form.ville, {
+                        attr: {
+                            class: 'w-full px-3 py-2 rounded border',
+                            'data-annonce-search-target': 'ville',
+                            'data-action': 'input->annonce-search#debounceFetch change->annonce-search#debounceFetch'
+                        }
+                    }) }}
+                </div>
+
                 <div class="flex-1">
                     {{ form_label(form.category) }}
-                    {{ form_widget(form.category, {'attr': {'class': 'w-full px-3 py-2 rounded border'}}) }}
+                    {{ form_widget(form.category, {
+                        attr: {
+                            class: 'w-full px-3 py-2 rounded border',
+                            'data-annonce-search-target': 'category',
+                            'data-action': 'change->annonce-search#debounceFetch'
+                        }
+                    }) }}
                 </div>
-                <div class="self-end">
-                    <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                        Rechercher
-                    </button>
+
+                {# Bouton masqué (fallback si tu veux garder le form classique plus tard) #}
+                <div class="self-end hidden">
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Rechercher</button>
                 </div>
             </div>
-            {{ form_end(form) }}
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {% for annonce in annonces %}
-                <div class="bg-white rounded-lg shadow p-6 flex flex-col justify-between">
-                    {% set mainPhoto = annonce.photos|filter(photo => photo.isMain)|first %}
-                    {% if mainPhoto %}
-                        <img src="{{ asset('uploads/photos/' ~ mainPhoto.filename) }}"
-                             alt="Photo principale de l'annonce"
-                             class="w-full h-48 object-cover rounded mb-4">
-                    {% else %}
-                        <img src="{{ asset('uploads/photos/default.jpg') }}"
-                             alt="Image par défaut"
-                             class="w-full h-48 object-cover rounded mb-4">
-                    {% endif %}
-
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900 mb-2 truncate">{{ annonce.titre }}</h2>
-                        <p class="text-sm text-gray-600 mb-2 line-clamp-2">
-                            {{ annonce.description|length > 120 ? annonce.description[:120] ~ '...' : annonce.description }}
-                        </p>
-                        <p class="text-xs text-gray-400">Publié le {{ annonce.createdAt|date('d/m/Y') }}</p>
-                    </div>
-
-                    <div class="mt-4">
-                        <a href="{{ path('annonce_show', { id: annonce.id }) }}"
-                           class="inline-block w-full bg-blue-600 text-white text-center py-2 rounded hover:bg-blue-700 transition">
-                            Voir l’annonce
-                        </a>
-                    </div>
-                </div>
-            {% else %}
-                <div class="col-span-full text-center text-gray-500">
-                    Aucune annonce disponible pour le moment.
-                </div>
-            {% endfor %}
+        {# 🧩 Conteneur des résultats : rendu initial + mises à jour AJAX #}
+        <div id="annonces-list" data-annonce-search-target="results">
+            {% include 'annonce/_annonce_cards.html.twig' with { annonces: annonces } %}
         </div>
     </div>
 {% endblock %}

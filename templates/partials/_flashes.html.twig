@@ -1,0 +1,32 @@
+{# templates/partials/_flashes.html.twig #}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function showFlash(label, message) {
+        const icon =
+            (label === 'danger' || label === 'error' || label === 'reset_password_error') ? 'error' :
+                (label === 'warning') ? 'warning' :
+                    (label === 'info') ? 'info' : 'success';
+
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: icon,
+            title: message,
+            showConfirmButton: false,
+            timer: 4000,
+            timerProgressBar: true,
+            buttonsStyling: false,
+            customClass: {
+                popup: 'rounded-lg shadow-lg',
+                title: 'text-sm font-medium text-gray-800'
+            }
+        });
+    }
+</script>
+
+{# Déclenche les toasts pour TOUS les types de flash #}
+{% for label, messages in app.flashes %}
+    {% for message in messages %}
+        <script>showFlash('{{ label|e('js') }}','{{ message|e('js') }}');</script>
+    {% endfor %}
+{% endfor %}

@@ -3,19 +3,6 @@
 {% block title %}Créer une annonce{% endblock %}
 
 {% block body %}
-
-    {# Messages flash #}
-    {% for label, messages in app.flashes %}
-        {% for message in messages %}
-            <div class="my-4 px-4 py-3 rounded
-                {% if label == 'success' %} bg-green-100 border border-green-300 text-green-800
-                {% elseif label == 'error' %} bg-red-100 border border-red-300 text-red-800
-                {% endif %}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endfor %}
-
     <div class="max-w-xl mx-auto p-6">
         <div class="text-center mb-10">
             <h1 class="text-3xl font-bold text-gray-900">
@@ -76,7 +63,7 @@
             <p class="text-xs text-gray-500">Après enregistrement, vous pourrez choisir la photo principale.</p>
         </div>
 
-        {# --------- (Optionnel) Photos déjà associées si on renvoie annonce ici --------- #}
+        {# --------- Photos existantes --------- #}
         {% if annonce is defined and annonce.photos|length > 0 %}
             <div class="mt-6">
                 <h2 class="text-sm font-semibold text-gray-700 mb-2">Choisir la photo principale</h2>
@@ -96,7 +83,7 @@
         {% endif %}
 
         <button type="submit"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-center">
+                class="w-full bg-blue-800 hover:bg-blue-900 text-white py-2 px-4 rounded-lg text-center">
             Publier l'annonce
         </button>
 

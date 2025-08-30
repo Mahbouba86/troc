@@ -7,6 +7,7 @@ use App\Entity\Category;
 use App\Entity\Photo;
 use App\Form\AnnonceType;
 use App\Form\SearchAnnonceType;
+use App\Repository\AnnonceRepository;
 use App\Service\Geocoding\GeoGouvGeocoderService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -29,10 +30,8 @@ use Symfony\UX\Map\Rectangle;
 
 class AnnonceController extends AbstractController
 {
-
     public function __construct(private readonly GeoGouvGeocoderService $geocoderService)
     {
-
     }
 
     #[Route('/annonces', name: 'annonce_index')]
@@ -73,6 +72,24 @@ class AnnonceController extends AbstractController
         ]);
     }
 
+    /**
+     * Recherche AJAX (retourne un fragment HTML)
+     * GET /annonces/search?q=velo&category=1&ville=Paris
+     */
+    #[Route('/annonces/search', name: 'annonce_search', methods: ['GET'])]
+    public function search(Request $request, AnnonceRepository $repo): Response
+    {
+        $term = (string) $request->query->get('q', '');
+        $categoryId = $request->query->getInt('category', 0) ?: null;
+        $ville = (string) $request->query->get('ville', '') ?: null;
+
+        $annonces = $repo->searchByTerm($term, $categoryId, $ville);
+
+        return $this->render('annonce/_annonce_cards.html.twig', [
+            'annonces' => $annonces,
+        ]);
+    }
+
     #[Route('/annonce/{id}', name: 'annonce_show', requirements: ['id' => '\d+'])]
     public function show(Annonce $annonce): Response
     {
@@ -89,7 +106,7 @@ class AnnonceController extends AbstractController
                         AnnonceStatus::RESERVED->value,
                     ];
                 } catch (\Throwable) {
-                    // on garde le fallback
+                    // fallback
                 }
             }
 
@@ -104,7 +121,8 @@ class AnnonceController extends AbstractController
                 }
             }
         }
-        $geogouv = null;// $this->geocoderService->geocodeCity($annonce->getVille());
+
+        $geogouv = null; // $this->geocoderService->geocodeCity($annonce->getVille());
         if (null === $geogouv) {
             $geogouv = ['lat' => 48.866667, 'lon' => 2.333333];
         }
@@ -114,7 +132,7 @@ class AnnonceController extends AbstractController
         // ---------------------
         $map = new Map();
 
-        // TODO: Remplacer par lat/lng de l’annonce quand tu les auras en BDD
+        // TODO: Remplacer par lat/lng de l’annonce quand disponibles en BDD
         $icon = Icon::url('p/uploads/icones/pin.png')->width(32)->height(32);
 
         $point = new Point($geogouv['lat'], $geogouv['lon']);
@@ -132,7 +150,7 @@ class AnnonceController extends AbstractController
         $map->fitBoundsToMarkers();
 
         return $this->render('annonce/show.html.twig', [
-            'annonce' => $annonce,                         // <-- IMPORTANT : passé au Twig
+            'annonce' => $annonce,
             'hasMyActiveReservation' => $hasMyActiveReservation,
             'map' => $map,
         ]);

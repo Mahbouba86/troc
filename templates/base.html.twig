@@ -16,20 +16,20 @@
 <body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col">
 <header class="bg-white shadow p-4">
     <div class="flex justify-between items-center max-w-7xl mx-auto">
-        <a href="{{ path('app_home') }}" class="text-xl font-bold text-gray-800">Service Troc</a>
+        <a href="{{ path('app_home') }}" class="text-xl font-bold text-gray-800">DonAgora</a>
 
         <nav class="flex gap-6 items-center">
-            <a href="{{ path('annonce_new') }}" class="text-gray-700 hover:text-blue-600">Je propose</a>
-            <a href="{{ path('annonce_index') }}" class="text-gray-700 hover:text-blue-600">Je recherche</a>
-            <a href="{{ path('app_contact') }}" class="text-gray-700 hover:text-blue-600">Contactez-nous</a>
+            <a href="{{ path('annonce_new') }}" class="text-gray-700 hover:text-blue-800">Je propose</a>
+            <a href="{{ path('annonce_index') }}" class="text-gray-700 hover:text-blue-800">Je recherche</a>
+            <a href="{{ path('app_contact') }}" class="text-gray-700 hover:text-blue-800">Contactez-nous</a>
 
             {% if app.user %}
                 <span class="text-sm text-gray-600">Bonjour, {{ app.user.username }}</span>
-                <a href="{{ path('app_profile') }}" class="text-blue-600 hover:underline">Mon profil</a>
-                <a href="{{ path('app_logout') }}" class="text-red-600 hover:underline">Déconnexion</a>
+                <a href="{{ path('app_profile') }}" class="text-blue-800 hover:underline">Mon profil</a>
+                <a href="{{ path('app_logout') }}" class="text-red-800 hover:underline">Déconnexion</a>
             {% else %}
-                <a href="{{ path('app_login') }}" class="text-blue-600 hover:underline">Connexion</a>
-                <a href="{{ path('app_register') }}" class="text-blue-600 hover:underline">Inscription</a>
+                <a href="{{ path('app_login') }}" class="text-blue-800 hover:underline">Connexion</a>
+                <a href="{{ path('app_register') }}" class="text-blue-800 hover:underline">Inscription</a>
             {% endif %}
         </nav>
     </div>
@@ -43,8 +43,11 @@
     <p>&copy; {{ "now"|date("Y") }} Service Troc - Tous droits réservés</p>
 </footer>
 
-{# JS via Importmap (ton entry s’appelle généralement "app") #}
+{# JS via Importmap (si tu l’utilises) #}
 {{ importmap('app') }}
+
+{# Flashes globaux (toasts SweetAlert2) #}
+{% include 'partials/_flashes.html.twig' %}
 
 {# Hook optionnel pour des scripts page-spécifiques #}
 {% block javascripts %}{% endblock %}

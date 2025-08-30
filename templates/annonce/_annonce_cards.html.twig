@@ -1,0 +1,46 @@
+{# Partial réutilisable : liste des annonces sous forme de cartes #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+    {% for annonce in annonces %}
+        <div class="bg-white rounded-lg shadow p-6 flex flex-col justify-between">
+            {# ----- Photo principale ----- #}
+            {% set mainPhoto = annonce.photos|filter(photo => photo.isMain)|first %}
+            {% if not mainPhoto and annonce.photos|length > 0 %}
+                {% set mainPhoto = annonce.photos|first %}
+            {% endif %}
+
+            {% if mainPhoto %}
+                <img src="{{ asset('uploads/photos/' ~ mainPhoto.filename) }}"
+                     alt="Photo principale de l'annonce"
+                     class="w-full h-48 object-cover rounded mb-4">
+            {% else %}
+                <img src="{{ asset('uploads/photos/default.jpg') }}"
+                     alt="Image par défaut"
+                     class="w-full h-48 object-cover rounded mb-4">
+            {% endif %}
+
+            {# ----- Infos ----- #}
+            <div>
+                <h2 class="text-xl font-bold text-gray-900 mb-2 truncate">{{ annonce.titre }}</h2>
+                <p class="text-sm text-gray-600 mb-2 line-clamp-2">
+                    {{ annonce.description|length > 120 ? annonce.description[:120] ~ '...' : annonce.description }}
+                </p>
+                <p class="text-xs text-gray-400">Publié le {{ annonce.createdAt|date('d/m/Y') }}</p>
+                {% if annonce.ville %}
+                    <p class="text-xs text-gray-500">Ville : {{ annonce.ville }}</p>
+                {% endif %}
+            </div>
+
+            {# ----- Bouton ----- #}
+            <div class="mt-4">
+                <a href="{{ path('annonce_show', { id: annonce.id }) }}"
+                   class="inline-block w-full bg-blue-600 text-white text-center py-2 rounded hover:bg-blue-700 transition">
+                    Voir l’annonce
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <div class="col-span-full text-center text-gray-500">
+            Aucune annonce disponible pour le moment.
+        </div>
+    {% endfor %}
+</div>
