@@ -11,7 +11,8 @@ class GeoGouvGeocoderService
     public function __construct(private readonly HttpClientInterface $http)
     {
     }
-    public function     geocodeCity(string $cityName, ?string $postcode = null): ?array
+
+    public function geocodeCity(string $cityName, ?string $postcode = null): ?array
     {
         // On cible l’index "poi" (lieux/unité admin) pour trouver les communes.
         // On limite à 1 résultat, et on peut aider la recherche avec le code postal si fourni.

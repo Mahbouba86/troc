@@ -1,0 +1,86 @@
+@startuml
+hide empty members
+skinparam classBackgroundColor #FFFFFF
+skinparam classBorderColor #666666
+skinparam shadowing false
+
+class Annonce {
+  +id: integer
+   titre: string
+   createdAt: datetime_immutable
+   description: text
+   status: string
+   ville: string
+}
+
+class Message {
+  +id: integer
+   content: text
+   createdAt: datetime_immutable
+}
+
+class Reservation {
+  +id: integer
+   createdAt: datetime_immutable
+   statut: string
+}
+
+class ContactMessage {
+  +id: integer
+   nom: string
+   email: string
+   sujet: string
+   message: text
+   createdAt: datetime_immutable
+}
+
+class Photo {
+  +id: integer
+   filename: string
+   isMain: boolean
+}
+
+class Category {
+  +id: integer
+   name: string
+   image: ?string
+}
+
+class User {
+  +id: integer
+   email: string
+   username: string
+   password: string
+   address: string
+   phoneNumber: string
+   roles: json
+   isVerified: boolean
+   codePostal: string
+   ville: string
+}
+
+class Notification {
+  +id: integer
+   titre: string
+   message: text
+}
+
+"N" -- "1" Annonce : User : user
+"1" -- "N" Annonce : Reservation : reservations
+"N" -- "1" Annonce : Category : category
+"1" -- "N" Annonce : Message : messages
+"1" -- "N" Annonce : Photo : photos
+"N" -- "1" Message : User : sender
+"N" -- "1" Message : User : receiver
+"N" -- "1" Message : Annonce : annonce
+"N" -- "1" Reservation : User : user
+"N" -- "1" Reservation : Annonce : annonce
+"N" -- "1" Photo : Annonce : annonce
+"1" -- "N" Category : Annonce : annonces
+"1" -- "N" User : Annonce : annonces
+"1" -- "N" User : Reservation : reservations
+"1" -- "N" User : Message : messagesSent
+"1" -- "N" User : Message : messagesReceived
+"1" -- "N" User : Notification : notifications
+"N" -- "1" Notification : User : user
+@enduml
