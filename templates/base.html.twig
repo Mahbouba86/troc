@@ -6,10 +6,15 @@
     <title>{% block title %}Mon site{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {# Encore pour le CSS seulement #}
-    {{ encore_entry_link_tags('app_css') }}
+    {# Inter font #}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    {# Leaflet CSS via CDN #}
+    {# Tailwind input file (the bundle swaps its contents with the built CSS) #}
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+
+    {# Leaflet CSS via CDN (optional if you don’t import it in app.css) #}
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -17,9 +22,12 @@
         crossorigin=""
     />
 
-    {# ImportMap pour le JS #}
-    {{ importmap('app') }}
+    {# Apply Inter globally (you can also do this in assets/styles/app.css) #}
+    <style>
+        html { font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif; }
+    </style>
 
+    {# Your page-level styles if any #}
     {% block stylesheets %}{% endblock %}
 </head>
 <body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col">
@@ -33,6 +41,10 @@
 {% include 'partials/_footer.html.twig' %}
 
 {% include 'partials/_flashes.html.twig' %}
+
+{# ImportMap for JS #}
+{{ importmap('app') }}
+
 {% block javascripts %}{% endblock %}
 </body>
 </html>
