@@ -46,6 +46,10 @@ class AnnonceController extends AbstractController
 
         $qb = $em->getRepository(Annonce::class)->createQueryBuilder('a');
 
+        // ⬇️ VISIBILITÉ PUBLIQUE : on exclut les annonces en attente (PENDING)
+        $qb->andWhere('a.status <> :pendingStatus')
+            ->setParameter('pendingStatus', AnnonceStatus::PENDING->value);
+
         $categoryId = $request->query->get('category');
         if ($categoryId) {
             $qb->andWhere('a.category = :cat')->setParameter('cat', $categoryId);
@@ -82,6 +86,7 @@ class AnnonceController extends AbstractController
         $categoryId = $request->query->getInt('category', 0) ?: null;
         $ville = (string) $request->query->get('ville', '') ?: null;
 
+        // Le repo exclut déjà PENDING.
         $annonces = $repo->searchByTerm($term, $categoryId, $ville);
 
         return $this->render('annonce/_annonce_cards.html.twig', [
@@ -92,8 +97,17 @@ class AnnonceController extends AbstractController
     #[Route('/annonce/{id}', name: 'annonce_show', requirements: ['id' => '\d+'])]
     public function show(Annonce $annonce): Response
     {
-        $hasMyActiveReservation = false;
         $user = $this->getUser();
+        $isOwner = $user && $annonce->getUser() && $annonce->getUser()->getId() === $user->getId();
+        $isAdmin = $this->isGranted('ROLE_ADMIN');
+        $isVisible = $annonce->getStatus() !== AnnonceStatus::PENDING;
+
+        // ⬇️ Page détail visible si non-PENDING, ou admin, ou auteur.
+        if (!$isVisible && !$isAdmin && !$isOwner) {
+            throw $this->createNotFoundException();
+        }
+
+        $hasMyActiveReservation = false;
 
         if ($user) {
             $activeReservationCodes = ['PENDING', 'RESERVED'];
@@ -148,6 +162,8 @@ class AnnonceController extends AbstractController
     #[Route('/annonce/{id}/edit', name: 'annonce_edit', methods: ['GET','POST'])]
     public function edit(Request $request, Annonce $annonce, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
+        $this->denyAccessUnlessGranted('ANNONCE_EDIT', $annonce);
+
         if ($annonce->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
         }
@@ -240,6 +256,7 @@ class AnnonceController extends AbstractController
             $annonce->setUser($this->getUser());
             $annonce->setCreatedAt(new \DateTimeImmutable());
 
+
             $uploadedFiles = $form->get('photos')->getData() ?? [];
             $newPhotos = [];
 
@@ -263,6 +280,7 @@ class AnnonceController extends AbstractController
 
                 $newPhotos[] = $photo;
             }
+            $annonce->setStatus(AnnonceStatus::PENDING);
 
             $em->persist($annonce);
             $em->flush();
@@ -276,7 +294,7 @@ class AnnonceController extends AbstractController
 
             $em->flush();
 
-            $this->addFlash('success', 'Annonce créée avec succès.');
+            $this->addFlash('success', 'Annonce créée et envoyée en validation.');
             return $this->redirectToRoute('annonce_edit', ['id' => $annonce->getId()]);
         }
 

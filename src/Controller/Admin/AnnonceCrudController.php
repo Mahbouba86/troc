@@ -9,7 +9,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ImageField;
-use Enum\Annonce\AnnonceStatus;
+use App\Enum\Annonce\AnnonceStatus;
 
 class AnnonceCrudController extends AbstractCrudController
 {

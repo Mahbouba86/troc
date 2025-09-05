@@ -5,46 +5,150 @@
 {% set activeClasses = 'text-blue-700 font-semibold border-blue-600 bg-blue-50' %}
 {% set idleClasses   = 'text-gray-700 hover:text-blue-800 border-transparent' %}
 
+<style>
+    @media (min-width: 768px) {
+        #burgerBtn { display: none !important; }             /* cache le burger en desktop */
+        nav[data-role="desktop"] { display: flex !important; } /* force la nav desktop visible */
+    }
+</style>
+
 <header class="bg-white shadow p-4">
-    <div class="flex justify-between items-center max-w-7xl mx-auto">
-        <a href="{{ path('app_home') }}" class="text-xl font-bold text-gray-800">DonAgora</a>
+    <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center">
+            <a href="{{ path('app_home') }}" class="text-xl font-bold text-gray-800">DeMainEnMain</a>
 
-        <nav class="flex gap-4 items-center">
-            <a href="{{ path('annonce_new') }}"
-               class="{{ linkBase }} {{ current_route in ['annonce_new','annonce_edit'] ? activeClasses : idleClasses }}"
-               {% if current_route in ['annonce_new','annonce_edit'] %}aria-current="page"{% endif %}>
-                Je propose
-            </a>
+            {# Bouton burger : visible uniquement en mobile #}
+            <button
+                id="burgerBtn"
+                class="md:hidden inline-flex items-center justify-center p-2 rounded-lg border border-gray-300"
+                aria-controls="mobileMenu"
+                aria-expanded="false"
+                aria-label="Ouvrir le menu"
+                type="button">
+                {# Icône hamburger #}
+                <svg id="iconOpen" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                {# Icône close #}
+                <svg id="iconClose" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
 
-            <a href="{{ path('annonce_index') }}"
-               class="{{ linkBase }} {{ current_route in ['annonce_index','annonce_show'] ? activeClasses : idleClasses }}"
-               {% if current_route in ['annonce_index','annonce_show'] %}aria-current="page"{% endif %}>
-                Je recherche
-            </a>
-
-            <a href="{{ path('app_contact') }}"
-               class="{{ linkBase }} {{ current_route == 'app_contact' ? activeClasses : idleClasses }}"
-               {% if current_route == 'app_contact' %}aria-current="page"{% endif %}>
-                Contactez-nous
-            </a>
-
-            {% if app.user %}
-                <span class="text-sm text-gray-600 ml-2">Bonjour, {{ app.user.username }}</span>
-                <a href="{{ path('app_profile') }}"
-                   class="{{ linkBase }} {{ current_route == 'app_profile' ? activeClasses : idleClasses }}">
-                    Mon profil
+            {# Nav desktop : visible à partir de md #}
+            <nav data-role="desktop" class="hidden md:flex gap-4 items-center">
+                <a href="{{ path('annonce_new') }}"
+                   class="{{ linkBase }} {{ current_route in ['annonce_new'] ? activeClasses : idleClasses }}"
+                   {% if current_route in ['annonce_new'] %}aria-current="page"{% endif %}>
+                    Je propose
                 </a>
-                <a href="{{ path('app_logout') }}" class="px-2 py-1 text-red-700 hover:text-red-800">Déconnexion</a>
-            {% else %}
-                <a href="{{ path('app_login') }}"
-                   class="{{ linkBase }} {{ current_route == 'app_login' ? activeClasses : idleClasses }}">
-                    Connexion
+
+                <a href="{{ path('annonce_index') }}"
+                   class="{{ linkBase }} {{ current_route in ['annonce_index','annonce_show'] ? activeClasses : idleClasses }}"
+                   {% if current_route in ['annonce_index','annonce_show'] %}aria-current="page"{% endif %}>
+                    Je recherche
                 </a>
-                <a href="{{ path('app_register') }}"
-                   class="{{ linkBase }} {{ current_route == 'app_register' ? activeClasses : idleClasses }}">
-                    Inscription
+
+                <a href="{{ path('app_contact') }}"
+                   class="{{ linkBase }} {{ current_route == 'app_contact' ? activeClasses : idleClasses }}"
+                   {% if current_route == 'app_contact' %}aria-current="page"{% endif %}>
+                    Contactez-nous
                 </a>
-            {% endif %}
-        </nav>
+
+                {% if app.user %}
+                    <span class="text-sm text-gray-600 ml-2">Bonjour, {{ app.user.username }}</span>
+                    <a href="{{ path('app_profile') }}"
+                       class="{{ linkBase }} {{ current_route == 'app_profile' ? activeClasses : idleClasses }}">
+                        Mon profil
+                    </a>
+                    <a href="{{ path('app_logout') }}" class="px-2 py-1 text-red-700 hover:text-red-800">Déconnexion</a>
+                {% else %}
+                    <a href="{{ path('app_login') }}"
+                       class="{{ linkBase }} {{ current_route == 'app_login' ? activeClasses : idleClasses }}">
+                        Connexion
+                    </a>
+                    <a href="{{ path('app_register') }}"
+                       class="{{ linkBase }} {{ current_route == 'app_register' ? activeClasses : idleClasses }}">
+                        Inscription
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+
+        {# Menu mobile : caché par défaut, visible quand on clique le burger #}
+        <div id="mobileMenu" class="md:hidden hidden mt-3 border-t pt-3">
+            <nav class="flex flex-col gap-2">
+                <a href="{{ path('annonce_new') }}"
+                   class="{{ linkBase }} {{ current_route in ['annonce_new'] ? activeClasses : idleClasses }}"
+                   {% if current_route in ['annonce_new'] %}aria-current="page"{% endif %}>
+                    Je propose
+                </a>
+
+                <a href="{{ path('annonce_index') }}"
+                   class="{{ linkBase }} {{ current_route in ['annonce_index','annonce_show'] ? activeClasses : idleClasses }}"
+                   {% if current_route in ['annonce_index','annonce_show'] %}aria-current="page"{% endif %}>
+                    Je recherche
+                </a>
+
+                <a href="{{ path('app_contact') }}"
+                   class="{{ linkBase }} {{ current_route == 'app_contact' ? activeClasses : idleClasses }}"
+                   {% if current_route == 'app_contact' %}aria-current="page"{% endif %}>
+                    Contactez-nous
+                </a>
+
+                {% if app.user %}
+                    <a href="{{ path('app_profile') }}"
+                       class="{{ linkBase }} {{ current_route == 'app_profile' ? activeClasses : idleClasses }}">
+                        Mon profil
+                    </a>
+                    <a href="{{ path('app_logout') }}" class="px-3 py-2 text-red-700 hover:text-red-800">Déconnexion</a>
+                {% else %}
+                    <a href="{{ path('app_login') }}"
+                       class="{{ linkBase }} {{ current_route == 'app_login' ? activeClasses : idleClasses }}">
+                        Connexion
+                    </a>
+                    <a href="{{ path('app_register') }}"
+                       class="{{ linkBase }} {{ current_route == 'app_register' ? activeClasses : idleClasses }}">
+                        Inscription
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
     </div>
+
+    {# JS minimal pour basculer l'état du menu #}
+    <script>
+        (function () {
+            const btn = document.getElementById('burgerBtn');
+            const menu = document.getElementById('mobileMenu');
+            const openIco = document.getElementById('iconOpen');
+            const closeIco = document.getElementById('iconClose');
+
+            if (!btn || !menu) return;
+
+            const setExpanded = (expanded) => {
+                btn.setAttribute('aria-expanded', String(expanded));
+                btn.setAttribute('aria-label', expanded ? 'Fermer le menu' : 'Ouvrir le menu');
+                menu.classList.toggle('hidden', !expanded);
+                openIco.classList.toggle('hidden', expanded);
+                closeIco.classList.toggle('hidden', !expanded);
+            };
+
+            let expanded = false;
+            btn.addEventListener('click', () => {
+                expanded = !expanded;
+                setExpanded(expanded);
+            });
+
+            // Fermer le menu après clic sur un lien
+            menu.addEventListener('click', (e) => {
+                const a = e.target.closest('a');
+                if (a) { expanded = false; setExpanded(false); }
+            });
+
+            // Fermer le menu si on repasse en desktop (prévention états bizarres)
+            const mql = window.matchMedia('(min-width: 768px)');
+            mql.addEventListener('change', (e) => { if (e.matches) setExpanded(false); });
+        })();
+    </script>
 </header>

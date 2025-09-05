@@ -6,27 +6,8 @@
     <title>{% block title %}Mon site{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {# Inter font #}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    {# Tailwind input file (the bundle swaps its contents with the built CSS) #}
-    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
-
-    {# Leaflet CSS via CDN (optional if you don’t import it in app.css) #}
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-        crossorigin=""
-    />
-
-    {# Apply Inter globally (you can also do this in assets/styles/app.css) #}
-    <style>
-        html { font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif; }
-    </style>
-
+    {{ encore_entry_link_tags('app_css') }}
+    {{ encore_entry_script_tags('app') }}
     {# Your page-level styles if any #}
     {% block stylesheets %}{% endblock %}
 </head>

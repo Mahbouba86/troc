@@ -40,13 +40,11 @@ class AnnonceType extends AbstractType
                 'choices' => [
                     AnnonceStatus::AVAILABLE,
                     AnnonceStatus::RESERVED,
-                    AnnonceStatus::FINISHED,
                 ],
                 'choice_label' => static function (AnnonceStatus $status) {
                     return match ($status) {
                         AnnonceStatus::AVAILABLE => 'Disponible',
                         AnnonceStatus::RESERVED  => 'Réservée',
-                        AnnonceStatus::FINISHED  => 'Terminée',
                     };
                 },
             ]);

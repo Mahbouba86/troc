@@ -166,16 +166,7 @@
                 </script>
             {% endif %}
 
-            {# DEBUG (désactive-le après test)
-            <pre class="text-xs text-gray-500">
-              s={{ s }} (raw={{ s_raw }})
-              owner={{ isOwner ? 'yes' : 'no' }}
-              receiverUser={{ receiverUser ? receiverUser.id : 'null' }}
-              isReceiver={{ isReceiver ? 'yes' : 'no' }}
-              finishRequestedAt={{ annonce.finishRequestedAt ? annonce.finishRequestedAt|date('c') : 'null' }}
-              me={{ app.user ? app.user.id : 'anon' }} | ownerId={{ annonce.user ? annonce.user.id : 'null' }}
-            </pre>
-            #}
+
         </div>
     </div>
 {% endblock %}

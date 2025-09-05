@@ -39,7 +39,7 @@ class Annonce
      * ⚠️ length=20 : OK pour "PENDING_CONFIRMATION" (20 caractères pile).
      * Si tu ajoutes un statut plus long, pense à augmenter length.
      */
-    #[ORM\Column(type: Types::STRING, length: 20, enumType: AnnonceStatus::class)]
+    #[ORM\Column(type: Types::STRING, length: 20, enumType: AnnonceStatus::class, options: ['default' => 'pending'])]
     private AnnonceStatus $status;
 
     #[ORM\ManyToOne(inversedBy: 'annonces')]
@@ -96,6 +96,19 @@ class Annonce
     public function getFinishRequestedAt(): ?\DateTimeImmutable { return $this->finishRequestedAt; }
     public function setFinishRequestedAt(?\DateTimeImmutable $dt): self { $this->finishRequestedAt = $dt; return $this; }
 
+    public function isFinished(): bool
+    {
+        return ($this->getStatus() instanceof AnnonceStatus)
+            ? $this->getStatus() === AnnonceStatus::FINISHED
+            : strtolower((string) $this->getStatus()) === 'finished';
+    }
+
+    public function isEditableBy(?User $user): bool
+    {
+        if (!$user) return false;
+        if ($this->isFinished()) return false;
+        return $user === $this->getUser() || in_array('ROLE_ADMIN', $user->getRoles(), true);
+    }
 
     public function __construct()
     {

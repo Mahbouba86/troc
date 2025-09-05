@@ -71,7 +71,6 @@ final class NotificationServiceTest extends TestCase
                 $this->assertSame($message, $n->getMessage());
                 $this->assertSame($user, $n->getUser());
                 $this->assertFalse($n->isRead());
-
                 // Si l’entity a un champ link, il doit être null via notify()
                 if (method_exists($n, 'getLink')) {
                     $this->assertNull($n->getLink());
@@ -80,7 +79,6 @@ final class NotificationServiceTest extends TestCase
             }));
 
         $em->expects($this->once())->method('flush');
-
         $service->notify($user, $title, $message);
     }
 }

@@ -4,8 +4,10 @@ namespace App\Repository;
 
 use App\Entity\Annonce;
 use App\Entity\User;
+use App\Enum\Annonce\AnnonceStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\ORM\QueryBuilder;
 
 /**
  * @extends ServiceEntityRepository<Annonce>
@@ -23,11 +25,11 @@ class AnnonceRepository extends ServiceEntityRepository
     }
 
     /**
-     * Compte les annonces publiées par un utilisateur donné
+     * Compte les annonces (tous statuts) pour un utilisateur.
      */
     public function countForUser(User $user): int
     {
-        return $this->createQueryBuilder('a')
+        return (int) $this->createQueryBuilder('a')
             ->select('COUNT(a.id)')
             ->where('a.user = :user')
             ->setParameter('user', $user)
@@ -35,9 +37,12 @@ class AnnonceRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
+    /**
+     * Compte les annonces d'un utilisateur par statut précis.
+     */
     public function countByStatus(User $user, string $status): int
     {
-        return $this->createQueryBuilder('a')
+        return (int) $this->createQueryBuilder('a')
             ->select('COUNT(a.id)')
             ->where('a.user = :user')
             ->andWhere('a.status = :status')
@@ -48,8 +53,30 @@ class AnnonceRepository extends ServiceEntityRepository
     }
 
     /**
-     * Recherche instantanée par terme (titre) + filtres optionnels.
-     * Charge aussi l'auteur et les photos pour éviter le N+1 sur la liste.
+     * QB côté public: exclut les annonces en attente (PENDING).
+     */
+    public function createVisibleQb(): QueryBuilder
+    {
+        return $this->createQueryBuilder('a')
+            ->andWhere('a.status <> :pending')
+            ->setParameter('pending', AnnonceStatus::PENDING->value)
+            ->orderBy('a.createdAt', 'DESC');
+    }
+
+    /**
+     * Récupère les annonces visibles (≠ PENDING).
+     */
+    public function findVisible(int $limit = 20, int $offset = 0): array
+    {
+        return $this->createVisibleQb()
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Recherche instantanée par terme (titre) + filtres optionnels, côté public (≠ PENDING).
      *
      * @param string|null $term       Texte saisi (ex: "vélo")
      * @param int|null    $categoryId ID catégorie (optionnel)
@@ -59,10 +86,9 @@ class AnnonceRepository extends ServiceEntityRepository
      */
     public function searchByTerm(?string $term, ?int $categoryId = null, ?string $ville = null, ?int $limit = null): array
     {
-        $qb = $this->createQueryBuilder('a')
+        $qb = $this->createVisibleQb()
             ->leftJoin('a.user', 'u')->addSelect('u')
-            ->leftJoin('a.photos', 'p')->addSelect('p')
-            ->orderBy('a.createdAt', 'DESC');
+            ->leftJoin('a.photos', 'p')->addSelect('p');
 
         if ($term !== null && $term !== '') {
             $qb->andWhere('LOWER(a.titre) LIKE :q')
