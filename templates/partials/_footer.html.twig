@@ -1,0 +1,10 @@
+{# templates/partials/_footer.html.twig #}
+<footer class="bg-gray-800 text-white min-h-32 flex items-center">
+    <div class="max-w-7xl mx-auto px-4 py-10 flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+        <p>&copy; {{ "now"|date("Y") }} DonAgora — Tous droits réservés</p>
+        <nav class="flex gap-4 text-sm">
+            <a href="{{ path('app_mentions_legales') }}" class="hover:underline">Mentions légales</a>
+            <a href="{{ path('app_terms') }}" class="hover:underline">Conditions d’utilisation</a>
+        </nav>
+    </div>
+</footer>

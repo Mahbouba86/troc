@@ -1,0 +1,61 @@
+{# Partiel : Bouton de réservation #}
+{# Requiert : variables 'annonce' et 'hasMyActiveReservation' #}
+
+<form id="reservation-form-{{ annonce.id }}"
+      method="post"
+      action="{{ path('reservation_request', { id: annonce.id }) }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('reservation_request_' ~ annonce.id) }}">
+
+    {% if hasMyActiveReservation %}
+        <button type="button"
+                class="bg-gray-300 text-gray-600 font-semibold py-2 px-6 rounded-lg cursor-not-allowed"
+                disabled
+                title="Demande déjà envoyée">
+            Demande déjà envoyée
+        </button>
+    {% else %}
+        <button type="button"
+                class="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-6 rounded-lg transition"
+                onclick="confirmReservation('{{ annonce.id }}','{{ annonce.titre|e('js') }}')">
+            Réserver
+        </button>
+    {% endif %}
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    /** Popup de confirmation + état "Envoi..." */
+    function confirmReservation(id, titre) {
+        Swal.fire({
+            title: 'Confirmer la réservation',
+            text: "Êtes-vous sûr de vouloir réserver : « " + (titre || "cet article") + " » ?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Oui, réserver',
+            cancelButtonText: 'Annuler',
+            buttonsStyling: false, // Tailwind-like
+            customClass: {
+                popup: 'rounded-xl shadow-lg p-6',
+                title: 'text-xl font-bold text-gray-900',
+                htmlContainer: 'text-gray-700',
+                confirmButton: 'bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded-lg mr-2',
+                cancelButton: 'bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Envoi de la demande...',
+                    didOpen: () => { Swal.showLoading(); },
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    backdrop: true,
+                    customClass: { popup: 'rounded-xl p-6' }
+                });
+                const form = document.getElementById('reservation-form-' + id);
+                if (form) form.submit();
+            }
+        });
+    }
+</script>

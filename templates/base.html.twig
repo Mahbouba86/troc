@@ -1,3 +1,4 @@
+{# templates/user_profile/base.html.twig #}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -5,36 +6,26 @@
     <title>{% block title %}Mon site{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {% block stylesheets %}
-        {{ encore_entry_link_tags('app_css') }}
-    {% endblock %}
+    {{ encore_entry_link_tags('app_css') }}
+    {{ encore_entry_script_tags('app') }}
+    {# Your page-level styles if any #}
+    {% block stylesheets %}{% endblock %}
 </head>
-
 <body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col">
-<header class="bg-white shadow p-4">
-    <div class="flex justify-between items-center max-w-7xl mx-auto">
-        <a href="{{ path('app_home') }}">Service Troc</a>
 
-        {% if app.user %}
-            <nav class="space-x-4">
-                <span>Bonjour, {{ app.user.username }}</span>
-                <a href="{{ path('app_profile') }}" class="text-blue-600 hover:underline">Mon profil</a>
-                <a href="{{ path('app_logout') }}" class="text-red-600 hover:underline">Déconnexion</a>
-            </nav>
-        {% else %}
-            <a href="{{ path('app_login') }}" class="text-blue-600 hover:underline">Connexion</a>
-        {% endif %}
-    </div>
-</header>
+{% include 'partials/_header.html.twig' with { current_route: app.request.attributes.get('_route') } %}
 
 <main class="flex-grow">
     {% block body %}{% endblock %}
 </main>
 
-<footer class="bg-gray-800 text-white text-center p-4">
-    <p>&copy; {{ "now"|date("Y") }} Service Troc - Tous droits réservés</p>
-</footer>
+{% include 'partials/_footer.html.twig' %}
 
-<script src="{{ asset('app.js') }}"></script>
+{% include 'partials/_flashes.html.twig' %}
+
+{# ImportMap for JS #}
+{{ importmap('app') }}
+
+{% block javascripts %}{% endblock %}
 </body>
 </html>

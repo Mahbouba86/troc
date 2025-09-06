@@ -1,12 +1,11 @@
 <?php
 
-namespace Enum\Annonce\Status;
+namespace App\Enum\Annonce;
+
 enum AnnonceStatus: string
 {
-    case PENDING = 'Pending';
-    case PUBLISHED = 'Published';
-    case CANCELLED = 'Drafted';
-    case AVAILABLE = 'Available';
-    case RESERVED = 'Reserved';
-    case FINISHED = 'Finished';
+    case PENDING   = 'pending';
+    case AVAILABLE = 'available';
+    case RESERVED  = 'reserved';
+    case FINISHED  = 'finished';
 }

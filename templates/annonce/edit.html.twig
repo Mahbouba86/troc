@@ -1,0 +1,110 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier l'annonce{% endblock %}
+
+{% block body %}
+    <div class="max-w-xl mx-auto p-6">
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-gray-900">
+                Modifier votre annonce<br>
+                <span class="text-blue-800">en toute simplicité</span>
+            </h1>
+        </div>
+
+        {# Ne force pas enctype ici : il est géré automatiquement si besoin #}
+        {{ form_start(form, {
+            attr: {
+                class: 'space-y-6',
+                id: 'annonce_edit_form',
+                novalidate: 'novalidate'
+            }
+        }) }}
+
+        {{ form_errors(form) }}
+
+        <div class="flex flex-col gap-2">
+            <label class="font-semibold text-sm text-gray-700">Titre</label>
+            {{ form_widget(form.titre, {attr: {class: 'px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 focus:ring-2 focus:ring-blue-500 text-sm'}}) }}
+            {{ form_errors(form.titre) }}
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="font-semibold text-sm text-gray-700">Description</label>
+            {{ form_widget(form.description, {attr: {class: 'px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 focus:ring-2 focus:ring-blue-500 text-sm'}}) }}
+            {{ form_errors(form.description) }}
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="font-semibold text-sm text-gray-700">Ville</label>
+            {{ form_widget(form.ville, {attr: {class: 'px-4 py-2 rounded-lg border border-gray-300 bg-gray-100 focus:ring-2 focus:ring-blue-500 text-sm'}}) }}
+            {{ form_errors(form.ville) }}
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label class="font-semibold text-sm text-gray-700">Catégorie</label>
+            {{ form_widget(form.category, {attr: {class: 'px-4 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-sm'}}) }}
+            {{ form_errors(form.category) }}
+        </div>
+
+        {% if form.status is defined %}
+            <div class="flex flex-col gap-2">
+                <label class="font-semibold text-sm text-gray-700">Statut</label>
+                {{ form_widget(form.status, {attr: {class: 'px-4 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-sm'}}) }}
+                {{ form_errors(form.status) }}
+            </div>
+        {% endif %}
+
+        <div class="flex flex-col gap-2">
+            <label class="font-semibold text-sm text-gray-700">Ajouter des photos</label>
+            {{ form_widget(form.photos, {attr: {class: 'block w-full text-sm text-gray-700 border border-gray-300 rounded-lg bg-white p-2'}}) }}
+            {{ form_errors(form.photos) }}
+        </div>
+
+        {% if annonce.photos|length > 0 %}
+            <div class="mt-6">
+                <h2 class="text-sm font-semibold text-gray-700 mb-2">Photos existantes</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {% for photo in annonce.photos %}
+                        <div class="border rounded-lg overflow-hidden relative">
+                            <img src="{{ asset('uploads/photos/' ~ photo.filename) }}" alt="photo" class="h-32 w-full object-cover">
+
+                            <div class="p-2 flex items-center gap-2">
+                                <input type="radio" name="mainPhoto" value="{{ photo.id }}" {% if photo.isMain %}checked{% endif %}>
+                                <span class="text-xs text-gray-700">Principale</span>
+                            </div>
+
+                            {# Bouton qui déclenche le form caché #}
+                            <button
+                                type="submit"
+                                form="delete-photo-{{ photo.id }}"
+                                class="absolute top-1 right-1 bg-red-600 text-white text-xs px-2 py-1 rounded"
+                                title="Supprimer"
+                                onclick="return confirm('Supprimer cette photo ?');"
+                            >X</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {# 👉 Rend explicitement le champ CSRF du formulaire principal #}
+        {{ form_row(form._token) }}
+
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-center">
+            Enregistrer les modifications
+        </button>
+        {{ form_end(form) }}
+
+        {# Formulaires cachés pour suppression (hors du form principal) #}
+        {% if annonce.photos|length > 0 %}
+            {% for photo in annonce.photos %}
+                <form id="delete-photo-{{ photo.id }}"
+                      method="post"
+                      action="{{ path('annonce_photo_delete', { photo: photo.id }) }}"
+                      style="display:none">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete_photo_' ~ photo.id) }}">
+                </form>
+            {% endfor %}
+        {% endif %}
+    </div>
+{% endblock %}

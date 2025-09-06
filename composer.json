@@ -14,6 +14,7 @@
         "doctrine/doctrine-fixtures-bundle": "^4.1",
         "doctrine/doctrine-migrations-bundle": "^3.4",
         "doctrine/orm": "^3.5",
+        "easycorp/easyadmin-bundle": "^4.24",
         "runtime/frankenphp-symfony": "^0.2.0",
         "symfony/asset": "7.3.*",
         "symfony/console": "7.3.*",
@@ -25,10 +26,14 @@
         "symfony/runtime": "7.3.*",
         "symfony/security-bundle": "7.3.*",
         "symfony/stimulus-bundle": "^2.27",
-        "symfony/ux-turbo": "^2.27",
+        "symfony/ux-icons": "^2.29",
+        "symfony/ux-leaflet-map": "^2.29",
+        "symfony/ux-map": "^2.29",
+        "symfony/ux-turbo": "^2.29",
         "symfony/validator": "7.3.*",
-        "symfony/webpack-encore-bundle": "^2.2",
+        "symfony/webpack-encore-bundle": "^2.3",
         "symfony/yaml": "7.3.*",
+        "symfonycasts/reset-password-bundle": "^1.23",
         "symfonycasts/tailwind-bundle": "^0.10.0",
         "symfonycasts/verify-email-bundle": "^1.17",
         "twig/intl-extra": "^3.21"
@@ -87,7 +92,10 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
+        "jawira/doctrine-diagram-bundle": "^1.0",
+        "phpunit/phpunit": "^12.3",
         "symfony/maker-bundle": "^1.64",
+        "symfony/phpunit-bridge": "^7.3",
         "symfony/web-profiler-bundle": "7.3.*"
     }
 }

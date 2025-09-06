@@ -1,0 +1,66 @@
+{# Partial réutilisable : liste des annonces sous forme de cartes #}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+    {% for annonce in annonces %}
+        <div class="bg-white rounded-lg shadow p-6 flex flex-col justify-between">
+            {# ----- Photo principale ----- #}
+            {% set mainPhoto = annonce.photos|filter(photo => photo.isMain)|first %}
+            {% if not mainPhoto and annonce.photos|length > 0 %}
+                {% set mainPhoto = annonce.photos|first %}
+            {% endif %}
+
+            {% if mainPhoto %}
+                <img src="{{ asset('uploads/photos/' ~ mainPhoto.filename) }}"
+                     alt="Photo principale de l'annonce"
+                     class="w-full h-48 object-cover rounded mb-4">
+            {% else %}
+                <img src="{{ asset('uploads/photos/default.jpg') }}"
+                     alt="Image par défaut"
+                     class="w-full h-48 object-cover rounded mb-4">
+            {% endif %}
+
+            {# ----- Infos ----- #}
+            <div>
+                <h2 class="text-xl font-bold text-gray-900 mb-2 truncate">{{ annonce.titre }}</h2>
+                <p class="text-sm text-gray-600 mb-2 line-clamp-2">
+                    {{ annonce.description|length > 120 ? annonce.description[:120] ~ '...' : annonce.description }}
+                </p>
+                <p class="text-xs text-gray-400">Publié le {{ annonce.createdAt|date('d/m/Y') }}</p>
+                {% if annonce.ville %}
+                    <p class="text-xs text-gray-500">Ville : {{ annonce.ville }}</p>
+                {% endif %}
+            </div>
+            {# Badge statut (version compacte pour card) #}
+            {% set rawStatus = attribute(annonce, 'status') %}
+            {% set s = attribute(rawStatus, 'value') is defined ? attribute(rawStatus, 'value') : rawStatus %}
+            {% set s = (s is not null) ? s|lower : 'pending' %}
+
+            {% set badgeClass = {
+                'available':'bg-green-100 text-green-800',
+                'reserved':'bg-yellow-100 text-yellow-800',
+                'finished':'bg-gray-200 text-gray-700',
+                'pending':'bg-blue-100 text-blue-800'
+            }[s]|default('bg-gray-100 text-gray-700') %}
+
+            {% set badgeLabel = {
+                'available':'Disponible',
+                'reserved':'Réservé',
+                'finished':'Troc effectué',
+                'pending':'En attente'
+            }[s]|default(s|capitalize) %}
+
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ badgeClass }}">{{ badgeLabel }}</span>
+
+            {# ----- Bouton ----- #}
+            <div class="mt-4">
+                <a href="{{ path('annonce_show', { id: annonce.id }) }}"
+                   class="inline-block w-full bg-blue-600 text-white text-center py-2 rounded hover:bg-blue-700 transition">
+                    Voir l’annonce
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <div class="col-span-full text-center text-gray-500">
+            Aucune annonce disponible pour le moment.
+        </div>
+    {% endfor %}
+</div>
