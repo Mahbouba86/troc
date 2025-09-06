@@ -6,6 +6,7 @@ use App\Entity\Annonce;
 use App\Entity\User;
 use App\Entity\Category;
 use App\Entity\Photo;
+use App\Form\AnnonceReservationType;
 use App\Form\AnnonceType;
 use App\Form\SearchAnnonceType;
 use App\Repository\AnnonceRepository;
@@ -82,9 +83,9 @@ class AnnonceController extends AbstractController
     #[Route('/annonces/search', name: 'annonce_search', methods: ['GET'])]
     public function search(Request $request, AnnonceRepository $repo): Response
     {
-        $term = (string) $request->query->get('q', '');
+        $term = (string)$request->query->get('q', '');
         $categoryId = $request->query->getInt('category', 0) ?: null;
-        $ville = (string) $request->query->get('ville', '') ?: null;
+        $ville = (string)$request->query->get('ville', '') ?: null;
 
         // Le repo exclut déjà PENDING.
         $annonces = $repo->searchByTerm($term, $categoryId, $ville);
@@ -133,8 +134,8 @@ class AnnonceController extends AbstractController
             position: $point,
             title: $annonce->getTitre(),
             infoWindow: new InfoWindow(
-                headerContent: '<b>'.htmlspecialchars($annonce->getTitre(), ENT_QUOTES).'</b>',
-                content: 'Ville : '.htmlspecialchars((string) $annonce->getVille(), ENT_QUOTES)
+                headerContent: '<b>' . htmlspecialchars($annonce->getTitre(), ENT_QUOTES) . '</b>',
+                content: 'Ville : ' . htmlspecialchars((string)$annonce->getVille(), ENT_QUOTES)
             ),
             icon: $icon
         ));
@@ -159,7 +160,34 @@ class AnnonceController extends AbstractController
         ]);
     }
 
-    #[Route('/annonce/{id}/edit', name: 'annonce_edit', methods: ['GET','POST'])]
+    #[Route('/annonce/{id}/reservation-edit', name: 'annonce_reserveration_edit', methods: ['GET', 'POST'])]
+    public function reservationEdit(Request $request, Annonce $annonce, EntityManagerInterface $em, SluggerInterface $slugger): Response
+    {
+        $this->denyAccessUnlessGranted('ANNONCE_EDIT', $annonce);
+
+        if ($annonce->getUser() !== $this->getUser() || (
+                $annonce->getStatus() !== AnnonceStatus::AVAILABLE &&
+                $annonce->getStatus() !== AnnonceStatus::RESERVED
+            )) {
+            throw $this->createAccessDeniedException();
+        }
+        $form = $this->createForm(AnnonceReservationType::class, $annonce);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->flush();
+            $this->addFlash('success', 'Statut de l\'annonce modifiée avec succès.');
+
+            return $this->redirectToRoute('mes_annonces');
+        }
+
+        return $this->render('annonce/reservation_edit.html.twig', [
+            'form' => $form->createView(),
+            'annonce' => $annonce,
+        ]);
+    }
+
+    #[Route('/annonce/{id}/edit', name: 'annonce_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Annonce $annonce, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
         $this->denyAccessUnlessGranted('ANNONCE_EDIT', $annonce);
@@ -230,7 +258,10 @@ class AnnonceController extends AbstractController
             $uploadDir = $this->getParameter('uploads_directory');
             $path = $uploadDir . '/' . $photo->getFilename();
             if ($fs->exists($path)) {
-                try { $fs->remove($path); } catch (\Throwable) {}
+                try {
+                    $fs->remove($path);
+                } catch (\Throwable) {
+                }
             }
 
             $em->remove($photo);
@@ -324,7 +355,10 @@ class AnnonceController extends AbstractController
         foreach ($annonce->getPhotos() as $photo) {
             $path = $uploadDir . '/' . $photo->getFilename();
             if ($fs->exists($path)) {
-                try { $fs->remove($path); } catch (\Throwable) {}
+                try {
+                    $fs->remove($path);
+                } catch (\Throwable) {
+                }
             }
             $em->remove($photo);
         }
@@ -345,16 +379,17 @@ class AnnonceController extends AbstractController
      */
     #[Route('/discussion/{id}/request-finish', name: 'discussion_request_finish', methods: ['POST'])]
     public function requestFinish(
-        Request $request,
-        Annonce $annonce,
+        Request                $request,
+        Annonce                $annonce,
         EntityManagerInterface $em,
-        NotificationService $notifier
-    ): Response {
+        NotificationService    $notifier
+    ): Response
+    {
         if ($annonce->getUser() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
         }
 
-        if (!$this->isCsrfTokenValid('request_finish_'.$annonce->getId(), $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('request_finish_' . $annonce->getId(), $request->request->get('_token'))) {
             $this->addFlash('error', 'Jeton CSRF invalide.');
             return $this->redirectToRoute('annonce_show', ['id' => $annonce->getId()]);
         }
@@ -376,7 +411,7 @@ class AnnonceController extends AbstractController
 
         // 3) repli : interlocuteur actif passé en hidden (receiverId)
         if (!$receiver) {
-            $receiverId = (int) $request->request->get('receiverId', 0);
+            $receiverId = (int)$request->request->get('receiverId', 0);
             if ($receiverId > 0) {
                 $candidate = $em->getRepository(User::class)->find($receiverId);
                 if ($candidate && $candidate !== $this->getUser()) {
@@ -399,7 +434,7 @@ class AnnonceController extends AbstractController
         $notifier->send(
             $receiver,
             'Confirmez la réception',
-            sprintf('Le propriétaire indique que « %s » est remis. Ouvrez la discussion pour confirmer.', (string) $annonce->getTitre()),
+            sprintf('Le propriétaire indique que « %s » est remis. Ouvrez la discussion pour confirmer.', (string)$annonce->getTitre()),
             $url
         );
 
@@ -412,11 +447,12 @@ class AnnonceController extends AbstractController
      */
     #[Route('/discussion/{id}/confirm-finish', name: 'discussion_confirm_finish', methods: ['POST'])]
     public function confirmFinish(
-        Request $request,
-        Annonce $annonce,
+        Request                $request,
+        Annonce                $annonce,
         EntityManagerInterface $em,
-        NotificationService $notifier
-    ): Response {
+        NotificationService    $notifier
+    ): Response
+    {
         $user = $this->getUser();
         if (!$user) {
             throw $this->createAccessDeniedException();
@@ -440,16 +476,13 @@ class AnnonceController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
-        if (!$this->isCsrfTokenValid('confirm_finished_'.$annonce->getId().'_'.$user->getId(), $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('confirm_finished_' . $annonce->getId() . '_' . $user->getId(), $request->request->get('_token'))) {
             $this->addFlash('error', 'Jeton CSRF invalide.');
             return $this->redirectToRoute('annonce_show', ['id' => $annonce->getId()]);
         }
 
-        if (class_exists(AnnonceStatus::class)) {
-            $annonce->setStatus(AnnonceStatus::FINISHED);
-        } else {
-            $annonce->setStatus('FINISHED');
-        }
+        $annonce->setStatus(AnnonceStatus::FINISHED);
+
         if (method_exists($annonce, 'setFinishRequestedAt')) {
             $annonce->setFinishRequestedAt(null);
         }
@@ -459,7 +492,7 @@ class AnnonceController extends AbstractController
         $notifier->send(
             $annonce->getUser(),
             'Réception confirmée',
-            sprintf('%s a confirmé la réception de « %s ».', $user->getUserIdentifier(), (string) $annonce->getTitre()),
+            sprintf('%s a confirmé la réception de « %s ».', $user->getUserIdentifier(), (string)$annonce->getTitre()),
             $this->generateUrl('annonce_show', ['id' => $annonce->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
         );
 
@@ -473,11 +506,11 @@ class AnnonceController extends AbstractController
     private function enumCode(mixed $status): string
     {
         if ($status instanceof \BackedEnum) {
-            return strtoupper((string) $status->value);
+            return strtoupper((string)$status->value);
         }
         if ($status instanceof \UnitEnum) {
             return strtoupper($status->name);
         }
-        return strtoupper((string) $status);
+        return strtoupper((string)$status);
     }
 }

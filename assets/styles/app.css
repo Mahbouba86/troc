@@ -1,2 +1,11 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
+
+@theme {
+    --color-orange-800: #9a3412;
+    --color-red-950:    #450a0a;
+}
+:root {
+    --btn-bg: var(--color-orange-800);
+    --btn-hover: var(--color-red-950);
+}

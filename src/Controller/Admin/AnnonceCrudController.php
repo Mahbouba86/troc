@@ -29,21 +29,9 @@ class AnnonceCrudController extends AbstractCrudController
             ChoiceField::new('status')
                 ->setChoices([
                     'Disponible' => AnnonceStatus::AVAILABLE,
-                    'Réservé' => AnnonceStatus::RESERVED,
-                    'Terminé' => AnnonceStatus::FINISHED,
-                ])
-                ->renderAsBadges([
-                    AnnonceStatus::AVAILABLE->value => 'success',  // vert
-                    AnnonceStatus::RESERVED->value => 'warning',  // orange
-                    AnnonceStatus::FINISHED->value => 'danger',   // rouge
-                ])
+                    'En attente' => AnnonceStatus::PENDING,                ])
                 ->formatValue(fn ($value, $entity) => $value instanceof AnnonceStatus ? $value->value : (string) $value),
 
-            ImageField::new('image')
-                ->setBasePath('uploads/photos') // pour affichage dans EasyAdmin
-                ->setUploadDir('public/uploads/photos') // répertoire d'upload
-                ->setUploadedFileNamePattern('[slug]-[timestamp].[extension]') // nommage auto
-                ->setRequired(false),
         ];
     }
 }

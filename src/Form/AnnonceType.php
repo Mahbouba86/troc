@@ -30,25 +30,6 @@ class AnnonceType extends AbstractType
                 'multiple' => true,
                 'required' => false,
             ]);
-
-        // Champ "status" seulement en édition
-        if ($options['is_edit']) {
-            $builder->add('status', EnumType::class, [
-                'class' => AnnonceStatus::class,
-                'required' => true,
-                'label' => 'Statut',
-                'choices' => [
-                    AnnonceStatus::AVAILABLE,
-                    AnnonceStatus::RESERVED,
-                ],
-                'choice_label' => static function (AnnonceStatus $status) {
-                    return match ($status) {
-                        AnnonceStatus::AVAILABLE => 'Disponible',
-                        AnnonceStatus::RESERVED  => 'Réservée',
-                    };
-                },
-            ]);
-        }
     }
 
     public function configureOptions(OptionsResolver $resolver): void

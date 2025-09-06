@@ -61,6 +61,11 @@
                                     <a href="{{ path('annonce_edit', { id: annonce.id }) }}"
                                        class="text-yellow-600 hover:underline text-sm font-medium">Modifier</a>
                                 {% endif %}
+
+                                {% if annonce.status.value == 'available' or annonce.status.value == 'reserved' %}
+                                    <a href="{{ path('annonce_reserveration_edit', { id: annonce.id }) }}"
+                                       class="text-yellow-600 hover:underline text-sm font-medium">Gérer la reservation</a>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

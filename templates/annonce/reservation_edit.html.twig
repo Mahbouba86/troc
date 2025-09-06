@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier l'annonce{% endblock %}
+
+{% block body %}
+    <div class="max-w-xl mx-auto p-6">
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-gray-900">
+                Modifier le statut de votre annonce</span>
+            </h1>
+        </div>
+
+        {# Ne force pas enctype ici : il est géré automatiquement si besoin #}
+        {{ form_start(form, {
+            attr: {
+                class: 'space-y-6',
+                id: 'annonce_edit_reservation_form',
+                novalidate: 'novalidate'
+            }
+        }) }}
+
+        {{ form_errors(form) }}
+
+
+        <div class="flex flex-col gap-2">
+            <label class="font-semibold text-sm text-gray-700">Statut</label>
+            {{ form_widget(form.status, {attr: {class: 'px-4 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-sm'}}) }}
+            {{ form_errors(form.status) }}
+        </div>
+
+        {{ form_rest(form) }}
+
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-center">
+            Enregistrer les modifications
+        </button>
+        {{ form_end(form) }}
+
+    </div>
+{% endblock %}
