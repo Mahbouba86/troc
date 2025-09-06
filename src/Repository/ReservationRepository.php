@@ -6,7 +6,7 @@ use App\Entity\Reservation;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use Enum\Reservation\ReservationStatus;
+use App\Enum\Reservation\ReservationStatus;
 
 class ReservationRepository extends ServiceEntityRepository
 {

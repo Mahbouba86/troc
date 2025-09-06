@@ -6,7 +6,7 @@ use App\Entity\Annonce;
 use App\Entity\Reservation;
 use App\Service\Notification\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
-use Enum\Reservation\ReservationStatus;            // enum de la RÉSERVATION
+use App\Enum\Reservation\ReservationStatus;            // enum de la RÉSERVATION
 use App\Enum\Annonce\AnnonceStatus;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;

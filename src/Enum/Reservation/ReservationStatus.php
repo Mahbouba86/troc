@@ -1,5 +1,5 @@
 <?php
-namespace Enum\Reservation;
+namespace App\Enum\Reservation;
 
 enum ReservationStatus: string
 {

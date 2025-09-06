@@ -7,7 +7,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\User;
 use App\Entity\Annonce;
-use Enum\Reservation\ReservationStatus; // OK si ton enum est bien dans ce namespace
+use App\Enum\Reservation\ReservationStatus; // OK si ton enum est bien dans ce namespace
 
 #[ORM\Entity(repositoryClass: ReservationRepository::class)]
 #[ORM\Index(columns: ['annonce_id'], name: 'idx_reservation_annonce')] // facultatif (perfs)
